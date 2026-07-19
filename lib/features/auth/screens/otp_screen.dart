@@ -7,9 +7,63 @@ import '../../../app/theme.dart';
 import '../../../core/widgets/common_widgets.dart';
 import '../../../providers/auth_provider.dart';
 
-class OtpScreen extends StatelessWidget {
+class OtpScreen extends StatefulWidget {
   const OtpScreen({super.key, required this.email});
   final String email;
+
+  @override
+  State<OtpScreen> createState() => _OtpScreenState();
+}
+
+class _OtpScreenState extends State<OtpScreen> {
+  final List<TextEditingController> _controllers = List.generate(6, (_) => TextEditingController());
+  final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
+  Timer? _timer;
+  int _secondsRemaining = 60;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    setState(() => _secondsRemaining = 60);
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_secondsRemaining > 0) {
+        setState(() => _secondsRemaining--);
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    for (var controller in _controllers) {
+      controller.dispose();
+    }
+    for (var node in _focusNodes) {
+      node.dispose();
+    }
+    super.dispose();
+  }
+
+  void _onChanged(String value, int index) {
+    if (value.isNotEmpty) {
+      if (index < 5) {
+        _focusNodes[index + 1].requestFocus();
+      } else {
+        _focusNodes[index].unfocus();
+      }
+    } else {
+      if (index > 0) {
+        _focusNodes[index - 1].requestFocus();
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +104,7 @@ class OtpScreen extends StatelessWidget {
                     color: Color(0xFF0F2646))),
             const SizedBox(height: 12),
             Text(
-              'Kode 6 digit telah dikirim ke\nemail ${email.isEmpty ? 'Anda' : email}',
+              'Kode 6 digit telah dikirim ke\nemail ${widget.email.isEmpty ? 'Anda' : widget.email}',
               textAlign: TextAlign.center,
               style: const TextStyle(
                   color: Color(0xFF7A93AA), fontSize: 14, height: 1.5),
@@ -64,29 +118,48 @@ class OtpScreen extends StatelessWidget {
                   width: 48,
                   height: 56,
                   decoration: BoxDecoration(
+                    color: Colors.white,
                     border: Border.all(
-                        color: index < 3
+                        color: _focusNodes[index].hasFocus || _controllers[index].text.isNotEmpty
                             ? const Color(0xFF45A5C7)
                             : const Color(0xFFE0E5EC),
-                        width: index < 3 ? 2 : 1),
+                        width: _focusNodes[index].hasFocus || _controllers[index].text.isNotEmpty ? 2 : 1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   alignment: Alignment.center,
-                  child: index < 3
-                      ? Text(
-                          index == 0 ? '4' : (index == 1 ? '8' : '2'),
-                          style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0F2646)),
-                        )
-                      : null,
+                  child: TextField(
+                    controller: _controllers[index],
+                    focusNode: _focusNodes[index],
+                    onChanged: (value) {
+                      setState(() {});
+                      _onChanged(value, index);
+                    },
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    maxLength: 1,
+                    style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F2646)),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      counterText: '',
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 24),
-            const Text('Kirim ulang kode dalam 00:42',
-                style: TextStyle(color: Color(0xFF7A93AA), fontSize: 12)),
+            Text(
+              _secondsRemaining > 0
+                  ? 'Kirim ulang kode dalam 00:${_secondsRemaining.toString().padLeft(2, '0')}'
+                  : 'Kirim ulang kode sekarang',
+              style: TextStyle(
+                  color: _secondsRemaining > 0 ? const Color(0xFF7A93AA) : const Color(0xFF45A5C7),
+                  fontSize: 12,
+                  fontWeight: _secondsRemaining > 0 ? FontWeight.normal : FontWeight.bold),
+            ),
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () => Navigator.pushReplacementNamed(
