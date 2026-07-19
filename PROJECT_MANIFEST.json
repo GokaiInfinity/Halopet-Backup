@@ -1,0 +1,158 @@
+{
+  "project": "HaloPet_Flutter_Final",
+  "file_count": 39,
+  "files": [
+    {
+      "path": ".gitignore",
+      "bytes": 141
+    },
+    {
+      "path": "README.md",
+      "bytes": 2104
+    },
+    {
+      "path": "analysis_options.yaml",
+      "bytes": 129
+    },
+    {
+      "path": "android/.gitkeep",
+      "bytes": 0
+    },
+    {
+      "path": "android/README.md",
+      "bytes": 106
+    },
+    {
+      "path": "assets/icons/.gitkeep",
+      "bytes": 0
+    },
+    {
+      "path": "assets/images/.gitkeep",
+      "bytes": 0
+    },
+    {
+      "path": "docs/IMPLEMENTATION_NOTES.md",
+      "bytes": 1185
+    },
+    {
+      "path": "docs/figma_reference/.gitkeep",
+      "bytes": 0
+    },
+    {
+      "path": "docs/figma_reference/File Project HaloPet.docx",
+      "bytes": 50221
+    },
+    {
+      "path": "docs/figma_reference/HaloPet.fig",
+      "bytes": 643974
+    },
+    {
+      "path": "docs/figma_reference/figma_meta.json",
+      "bytes": 318
+    },
+    {
+      "path": "docs/figma_reference/figma_thumbnail.png",
+      "bytes": 12181
+    },
+    {
+      "path": "ios/.gitkeep",
+      "bytes": 0
+    },
+    {
+      "path": "ios/README.md",
+      "bytes": 106
+    },
+    {
+      "path": "lib/app/app.dart",
+      "bytes": 3609
+    },
+    {
+      "path": "lib/app/routes.dart",
+      "bytes": 1285
+    },
+    {
+      "path": "lib/app/theme.dart",
+      "bytes": 2188
+    },
+    {
+      "path": "lib/core/widgets/common_widgets.dart",
+      "bytes": 4278
+    },
+    {
+      "path": "lib/core/widgets/role_scaffolds.dart",
+      "bytes": 4052
+    },
+    {
+      "path": "lib/database/database_helper.dart",
+      "bytes": 10380
+    },
+    {
+      "path": "lib/features/admin/admin_screens.dart",
+      "bytes": 7515
+    },
+    {
+      "path": "lib/features/auth/auth_screens.dart",
+      "bytes": 9864
+    },
+    {
+      "path": "lib/features/doctor/doctor_screens.dart",
+      "bytes": 14909
+    },
+    {
+      "path": "lib/features/owner/owner_screens.dart",
+      "bytes": 23809
+    },
+    {
+      "path": "lib/main.dart",
+      "bytes": 895
+    },
+    {
+      "path": "lib/models/models.dart",
+      "bytes": 2278
+    },
+    {
+      "path": "lib/providers/admin_provider.dart",
+      "bytes": 352
+    },
+    {
+      "path": "lib/providers/auth_provider.dart",
+      "bytes": 2251
+    },
+    {
+      "path": "lib/providers/consultation_provider.dart",
+      "bytes": 1102
+    },
+    {
+      "path": "lib/providers/doctor_provider.dart",
+      "bytes": 441
+    },
+    {
+      "path": "lib/providers/pet_provider.dart",
+      "bytes": 907
+    },
+    {
+      "path": "lib/services/auth_service.dart",
+      "bytes": 186
+    },
+    {
+      "path": "lib/services/consultation_service.dart",
+      "bytes": 196
+    },
+    {
+      "path": "lib/services/pet_service.dart",
+      "bytes": 165
+    },
+    {
+      "path": "pubspec.yaml",
+      "bytes": 577
+    },
+    {
+      "path": "setup_and_run.bat",
+      "bytes": 466
+    },
+    {
+      "path": "test/widget_test.dart",
+      "bytes": 379
+    }
+  ]
+}

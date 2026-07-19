@@ -1,0 +1,494 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../app/routes.dart';
+import '../../app/theme.dart';
+import '../../core/widgets/common_widgets.dart';
+import '../../core/widgets/role_scaffolds.dart';
+import '../../database/database_helper.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/consultation_provider.dart';
+
+class DoctorDashboardScreen extends StatefulWidget {
+  const DoctorDashboardScreen({super.key});
+
+  @override
+  State<DoctorDashboardScreen> createState() => _DoctorDashboardScreenState();
+}
+
+class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
+  Map<String, Object?>? doctor;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    doctor = await DatabaseHelper.instance
+        .getDoctorByUser(context.read<AuthProvider>().user!.id);
+    if (doctor != null) {
+      await context
+          .read<ConsultationProvider>()
+          .loadDoctor(doctor!['id'] as int);
+    }
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = context.read<AuthProvider>().user!;
+    final items = context.watch<ConsultationProvider>().items;
+    final activeCount = items
+        .where((e) => e['status'] != 'finished' && e['status'] != 'cancelled')
+        .length;
+    final waitingCount = items.where((e) => e['status'] == 'waiting').length;
+    final finishedCount = items.where((e) => e['status'] == 'finished').length;
+
+    return DoctorScaffold(
+      title: 'Dashboard dokter',
+      index: 0,
+      body: doctor == null
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                Text(
+                  'Selamat datang, ${user.name}',
+                  style: const TextStyle(
+                      fontSize: 25, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Kelola konsultasi dan pasien hari ini.',
+                  style: TextStyle(color: AppColors.muted),
+                ),
+                const SizedBox(height: 22),
+                Container(
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.medical_services,
+                          size: 46, color: Colors.white),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$activeCount konsultasi aktif',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 21,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const Text(
+                              'Periksa daftar janji dan tanggapi pasien.',
+                              style: TextStyle(color: Color(0xFFDDEBFF)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const SectionTitle('Ringkasan'),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _metric(
+                        'Menunggu',
+                        '$waitingCount',
+                        Icons.hourglass_top,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _metric(
+                        'Selesai',
+                        '$finishedCount',
+                        Icons.check_circle_outline,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                SectionTitle(
+                  'Janji terbaru',
+                  action: TextButton(
+                    onPressed: () => Navigator.pushNamed(
+                      context,
+                      AppRoutes.doctorAppointments,
+                    ),
+                    child: const Text('Lihat semua'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (items.isEmpty)
+                  const InfoCard(child: Text('Belum ada janji konsultasi.'))
+                else
+                  ...items.take(3).map(
+                        (c) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: InfoCard(
+                            onTap: () => Navigator.pushNamed(
+                              context,
+                              AppRoutes.doctorConsultation,
+                              arguments: c,
+                            ),
+                            child: Row(
+                              children: [
+                                AvatarInitials(
+                                  '${c['pet_name']}',
+                                  icon: Icons.pets,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${c['pet_name']}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${c['owner_name']} • ${c['schedule_date'] ?? ''} ${c['schedule_time'] ?? ''}',
+                                        style: const TextStyle(
+                                          color: AppColors.muted,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                StatusChip('${c['status']}'),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+              ],
+            ),
+    );
+  }
+
+  Widget _metric(String title, String number, IconData icon) {
+    return InfoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: AppColors.primary),
+          const SizedBox(height: 10),
+          Text(
+            number,
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
+          ),
+          Text(title, style: const TextStyle(color: AppColors.muted)),
+        ],
+      ),
+    );
+  }
+}
+
+class DoctorAppointmentsScreen extends StatefulWidget {
+  const DoctorAppointmentsScreen({super.key});
+  @override
+  State<DoctorAppointmentsScreen> createState() =>
+      _DoctorAppointmentsScreenState();
+}
+
+class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    final d = await DatabaseHelper.instance
+        .getDoctorByUser(context.read<AuthProvider>().user!.id);
+    if (d != null && mounted)
+      context.read<ConsultationProvider>().loadDoctor(d['id'] as int);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.watch<ConsultationProvider>();
+    return DoctorScaffold(
+        title: 'Janji konsultasi',
+        index: 1,
+        body: p.loading
+            ? const Center(child: CircularProgressIndicator())
+            : p.items.isEmpty
+                ? const EmptyState(
+                    title: 'Belum ada janji',
+                    message: 'Permintaan konsultasi akan tampil di sini.',
+                    icon: Icons.event_busy)
+                : ListView.separated(
+                    padding: const EdgeInsets.all(20),
+                    itemCount: p.items.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (_, i) {
+                      final c = p.items[i];
+                      return InfoCard(
+                          onTap: () => Navigator.pushNamed(
+                              context, AppRoutes.doctorConsultation,
+                              arguments: c),
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(children: [
+                                  Expanded(
+                                      child: Text(
+                                          '${c['pet_name']} • ${c['species']}',
+                                          style: const TextStyle(
+                                              fontSize: 17,
+                                              fontWeight: FontWeight.w900))),
+                                  StatusChip('${c['status']}')
+                                ]),
+                                const SizedBox(height: 8),
+                                Text('Pemilik: ${c['owner_name']}',
+                                    style: const TextStyle(
+                                        color: AppColors.muted)),
+                                Text(
+                                    '${c['schedule_date'] ?? ''} ${c['schedule_time'] ?? ''}',
+                                    style: const TextStyle(
+                                        color: AppColors.muted)),
+                                const SizedBox(height: 8),
+                                Text('${c['complaint']}',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis)
+                              ]));
+                    }));
+  }
+}
+
+class DoctorConsultationScreen extends StatefulWidget {
+  const DoctorConsultationScreen({super.key, required this.consultation});
+  final Map<String, Object?> consultation;
+  @override
+  State<DoctorConsultationScreen> createState() =>
+      _DoctorConsultationScreenState();
+}
+
+class _DoctorConsultationScreenState extends State<DoctorConsultationScreen> {
+  final diagnosis = TextEditingController(),
+      treatment = TextEditingController(),
+      medicine = TextEditingController(),
+      notes = TextEditingController();
+  late Map<String, Object?> _consultation;
+
+  @override
+  void initState() {
+    super.initState();
+    _consultation = Map<String, Object?>.from(widget.consultation);
+  }
+
+  String get status => '${_consultation['status']}';
+  Future<void> setStatus(String s) async {
+    await DatabaseHelper.instance
+        .updateConsultationStatus(_consultation['id'] as int, s);
+    if (mounted) setState(() => _consultation['status'] = s);
+  }
+
+  Future<void> finish() async {
+    if (diagnosis.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Diagnosis wajib diisi.')));
+      return;
+    }
+    await DatabaseHelper.instance.addMedicalRecord({
+      'pet_id': widget.consultation['pet_id'],
+      'doctor_id': widget.consultation['doctor_id'],
+      'consultation_id': widget.consultation['id'],
+      'diagnosis': diagnosis.text,
+      'treatment': treatment.text,
+      'medicine': medicine.text,
+      'notes': notes.text,
+      'date': DateTime.now().toIso8601String()
+    });
+    await setStatus('finished');
+    if (mounted)
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Rekam medis tersimpan dan konsultasi selesai.')));
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+      appBar: AppBar(title: Text('${widget.consultation['pet_name']}')),
+      body: ListView(padding: const EdgeInsets.all(20), children: [
+        InfoCard(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Expanded(
+                child: Text(
+                    '${widget.consultation['pet_name']} • ${widget.consultation['species']}',
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.w900))),
+            StatusChip(status)
+          ]),
+          const SizedBox(height: 8),
+          Text('Pemilik: ${widget.consultation['owner_name']}',
+              style: const TextStyle(color: AppColors.muted)),
+          const Divider(height: 24),
+          Text('Keluhan: ${widget.consultation['complaint']}')
+        ])),
+        const SizedBox(height: 16),
+        if (status == 'waiting')
+          ElevatedButton(
+              onPressed: () => setStatus('accepted'),
+              child: const Text('Terima konsultasi')),
+        if (status == 'accepted')
+          ElevatedButton(
+              onPressed: () => setStatus('ongoing'),
+              child: const Text('Mulai konsultasi')),
+        if (status == 'ongoing' || status == 'accepted') ...[
+          const SizedBox(height: 20),
+          const SectionTitle('Rekam medis'),
+          const SizedBox(height: 12),
+          TextField(
+              controller: diagnosis,
+              decoration: const InputDecoration(labelText: 'Diagnosis')),
+          const SizedBox(height: 12),
+          TextField(
+              controller: treatment,
+              maxLines: 2,
+              decoration: const InputDecoration(labelText: 'Tindakan')),
+          const SizedBox(height: 12),
+          TextField(
+              controller: medicine,
+              decoration: const InputDecoration(labelText: 'Obat/resep')),
+          const SizedBox(height: 12),
+          TextField(
+              controller: notes,
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: 'Catatan')),
+          const SizedBox(height: 18),
+          ElevatedButton(
+              onPressed: finish, child: const Text('Simpan dan selesaikan'))
+        ],
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.chat,
+                    arguments: {
+                      ...widget.consultation,
+                      'doctor_name': context.read<AuthProvider>().user!.name
+                    }),
+            icon: const Icon(Icons.chat_bubble_outline),
+            label: const Text('Buka chat'))
+      ]));
+}
+
+class DoctorScheduleScreen extends StatelessWidget {
+  const DoctorScheduleScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    final uid = context.read<AuthProvider>().user!.id;
+    return DoctorScaffold(
+        title: 'Jadwal praktik',
+        index: 2,
+        body: FutureBuilder<Map<String, Object?>?>(
+            future: DatabaseHelper.instance.getDoctorByUser(uid),
+            builder: (_, d) {
+              if (!d.hasData)
+                return const Center(child: CircularProgressIndicator());
+              return FutureBuilder<List<Map<String, Object?>>>(
+                  future: DatabaseHelper.instance
+                      .getSchedules(d.data!['id'] as int),
+                  builder: (_, s) {
+                    if (!s.hasData)
+                      return const Center(child: CircularProgressIndicator());
+                    return ListView.separated(
+                        padding: const EdgeInsets.all(20),
+                        itemCount: s.data!.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (_, i) {
+                          final x = s.data![i];
+                          return InfoCard(
+                              child: Row(children: [
+                            const Icon(Icons.calendar_today,
+                                color: AppColors.primary),
+                            const SizedBox(width: 12),
+                            Expanded(
+                                child: Text('${x['date']} • ${x['time']}',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w800))),
+                            StatusChip(x['status'] == 'booked'
+                                ? 'accepted'
+                                : 'waiting')
+                          ]));
+                        });
+                  });
+            }));
+  }
+}
+
+class DoctorProfileScreen extends StatelessWidget {
+  const DoctorProfileScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    final user = context.read<AuthProvider>().user!;
+    return DoctorScaffold(
+        title: 'Profil dokter',
+        index: 3,
+        body: ListView(padding: const EdgeInsets.all(20), children: [
+          Center(
+              child: AvatarInitials(user.name,
+                  radius: 52, icon: Icons.medical_services)),
+          const SizedBox(height: 14),
+          Center(
+              child: Text(user.name,
+                  style: const TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.w900))),
+          Center(
+              child: Text(user.email,
+                  style: const TextStyle(color: AppColors.muted))),
+          const SizedBox(height: 24),
+          FutureBuilder<Map<String, Object?>?>(
+              future: DatabaseHelper.instance.getDoctorByUser(user.id),
+              builder: (_, s) {
+                if (!s.hasData)
+                  return const Center(child: CircularProgressIndicator());
+                final d = s.data!;
+                return InfoCard(
+                    child: Column(children: [
+                  ListTile(
+                      leading: const Icon(Icons.workspace_premium_outlined),
+                      title: const Text('Spesialisasi'),
+                      subtitle: Text('${d['specialist']}')),
+                  const Divider(),
+                  ListTile(
+                      leading: const Icon(Icons.badge_outlined),
+                      title: const Text('Nomor izin'),
+                      subtitle: Text('${d['license']}')),
+                  const Divider(),
+                  ListTile(
+                      leading: const Icon(Icons.star_outline),
+                      title: const Text('Rating'),
+                      subtitle: Text('${d['rating']}'))
+                ]));
+              }),
+          const SizedBox(height: 18),
+          OutlinedButton.icon(
+              onPressed: () async {
+                await context.read<AuthProvider>().logout();
+                if (context.mounted)
+                  Navigator.pushNamedAndRemoveUntil(
+                      context, AppRoutes.login, (_) => false);
+              },
+              icon: const Icon(Icons.logout),
+              label: const Text('Keluar'))
+        ]));
+  }
+}
