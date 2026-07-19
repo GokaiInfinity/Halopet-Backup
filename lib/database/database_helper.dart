@@ -14,7 +14,7 @@ class DatabaseHelper {
   Future<Database> _init() async {
     final path = join(await getDatabasesPath(), 'halopet.db');
     return openDatabase(path,
-        version: 6,
+        version: 8,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
         onOpen: (db) async => _seed(db));
@@ -22,11 +22,11 @@ class DatabaseHelper {
 
   Future<void> _onCreate(Database db, int version) async {
     await db.execute(
-        '''CREATE TABLE users(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, phone TEXT DEFAULT '', role TEXT NOT NULL, created_at TEXT NOT NULL)''');
+        '''CREATE TABLE users(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, phone TEXT DEFAULT '', photo TEXT DEFAULT '', role TEXT NOT NULL, created_at TEXT NOT NULL)''');
     await db.execute(
         '''CREATE TABLE doctors(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL UNIQUE, specialist TEXT NOT NULL, license TEXT NOT NULL, rating REAL DEFAULT 0, experience INTEGER DEFAULT 0, bio TEXT DEFAULT '', consultation_fee REAL DEFAULT 50000, verified INTEGER DEFAULT 1, FOREIGN KEY(user_id) REFERENCES users(id))''');
     await db.execute(
-        '''CREATE TABLE pets(id INTEGER PRIMARY KEY AUTOINCREMENT, owner_id INTEGER NOT NULL, name TEXT NOT NULL, species TEXT NOT NULL, breed TEXT DEFAULT '', gender TEXT DEFAULT '', age INTEGER DEFAULT 0, weight REAL DEFAULT 0, photo TEXT DEFAULT '', tanggal_lahir TEXT DEFAULT '', warna_ciri TEXT DEFAULT '', status_steril TEXT DEFAULT 'Belum Steril', alergi TEXT DEFAULT '', FOREIGN KEY(owner_id) REFERENCES users(id))''');
+        '''CREATE TABLE pets(id INTEGER PRIMARY KEY AUTOINCREMENT, owner_id INTEGER NOT NULL, name TEXT NOT NULL, species TEXT NOT NULL, breed TEXT DEFAULT '', gender TEXT DEFAULT '', age INTEGER DEFAULT 0, weight REAL DEFAULT 0, photo TEXT DEFAULT '', tanggal_lahir TEXT DEFAULT '', warna_ciri TEXT DEFAULT '', status_steril TEXT DEFAULT 'Belum Steril', alergi TEXT DEFAULT '', additional_photos TEXT DEFAULT '[]', FOREIGN KEY(owner_id) REFERENCES users(id))''');
     await db.execute(
         '''CREATE TABLE vaccinations(id INTEGER PRIMARY KEY AUTOINCREMENT, pet_id INTEGER NOT NULL, name TEXT NOT NULL, date TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'Aktif', next_date TEXT DEFAULT '', FOREIGN KEY(pet_id) REFERENCES pets(id))''');
     await db.execute(
@@ -164,6 +164,12 @@ class DatabaseHelper {
       await db.execute(
           '''CREATE TABLE help_tickets(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'open', admin_reply TEXT DEFAULT '', created_at TEXT NOT NULL, FOREIGN KEY(user_id) REFERENCES users(id))''');
     }
+    if (oldVersion < 7) {
+      await db.execute("ALTER TABLE users ADD COLUMN photo TEXT DEFAULT ''");
+    }
+    if (oldVersion < 8) {
+      await db.execute("ALTER TABLE pets ADD COLUMN additional_photos TEXT DEFAULT '[]'");
+    }
   }
 
   String hashPassword(String password) =>
@@ -300,6 +306,22 @@ class DatabaseHelper {
       required String password,
       required String phone}) async {
     final db = await database;
+
+    final existing = await db.query('users',
+        where: 'LOWER(email) = ? OR phone = ?',
+        whereArgs: [email.toLowerCase().trim(), phone],
+        limit: 1);
+        
+    if (existing.isNotEmpty) {
+      final row = existing.first;
+      if ((row['email'] as String).toLowerCase() == email.toLowerCase().trim()) {
+        throw Exception('Email sudah terdaftar.');
+      }
+      if (row['phone'] == phone) {
+        throw Exception('Nomor telepon sudah terdaftar.');
+      }
+    }
+
     return db.insert('users', {
       'name': name,
       'email': email.toLowerCase().trim(),
@@ -642,5 +664,18 @@ class DatabaseHelper {
         },
         where: 'id = ?',
         whereArgs: [ticketId]);
+  }
+
+  Future<void> updateUserProfile(int id, String name, String phone, String photo) async {
+    final db = await database;
+    await db.update(
+        'users',
+        {
+          'name': name,
+          'phone': phone,
+          'photo': photo,
+        },
+        where: 'id = ?',
+        whereArgs: [id]);
   }
 }

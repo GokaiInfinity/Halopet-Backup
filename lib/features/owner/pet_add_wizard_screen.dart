@@ -1,4 +1,7 @@
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/pet_provider.dart';
@@ -16,10 +19,45 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
   int get currentStep {
     if (pageIndex <= 2) return 0;
     if (pageIndex == 3) return 1;
-    return 2;
+    if (pageIndex == 4) return 2;
+    return 3;
   }
 
   final PageController _pageController = PageController();
+  final TextEditingController _birthDateController = TextEditingController();
+  final TextEditingController _ageController = TextEditingController();
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _birthDateController.dispose();
+    _ageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        _birthDateController.text = "${picked.day.toString().padLeft(2, '0')}-${picked.month.toString().padLeft(2, '0')}-${picked.year}";
+        
+        // Calculate age
+        final now = DateTime.now();
+        int calculatedAge = now.year - picked.year;
+        if (now.month < picked.month || (now.month == picked.month && now.day < picked.day)) {
+          calculatedAge--;
+        }
+        _ageController.text = calculatedAge.toString();
+        birthDate = _birthDateController.text;
+        age = _ageController.text;
+      });
+    }
+  }
 
   // Step 1: Identitas
   final _identitasForm = GlobalKey<FormState>();
@@ -27,6 +65,60 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
   String species = 'Anjing';
   String breed = '';
   String gender = 'Jantan';
+  String petPhoto = '';
+  List<String> additionalPhotos = [];
+
+  Future<void> _pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    try {
+      final pickedFile = await picker.pickImage(source: source);
+      if (pickedFile != null) {
+        setState(() {
+          petPhoto = pickedFile.path;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Fitur kamera tidak didukung di perangkat ini. Silakan pilih dari Galeri.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickAdditionalImages() async {
+    final picker = ImagePicker();
+    final pickedFiles = await picker.pickMultiImage();
+    if (pickedFiles.isNotEmpty) {
+      setState(() {
+        for (var file in pickedFiles) {
+          if (additionalPhotos.length < 10) {
+            additionalPhotos.add(file.path);
+          }
+        }
+      });
+    }
+  }
+
+  Future<void> _pickAdditionalImageCamera() async {
+    final picker = ImagePicker();
+    try {
+      final pickedFile = await picker.pickImage(source: ImageSource.camera);
+      if (pickedFile != null) {
+        setState(() {
+          if (additionalPhotos.length < 10) {
+            additionalPhotos.add(pickedFile.path);
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Fitur kamera tidak didukung di perangkat ini. Silakan pilih dari Galeri.')),
+        );
+      }
+    }
+  }
 
   // Step 2: Fisik
   final _fisikForm = GlobalKey<FormState>();
@@ -56,7 +148,7 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
     } else if (pageIndex == 4) {
       if (!_riwayatForm.currentState!.validate()) return;
       _riwayatForm.currentState!.save();
-
+    } else if (pageIndex == 5) {
       // Save to database
       setState(() => saving = true);
       final ownerId = context.read<AuthProvider>().user!.id;
@@ -68,11 +160,12 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
         'gender': gender,
         'age': int.tryParse(age) ?? 0,
         'weight': double.tryParse(weight) ?? 0,
-        'photo': '',
+        'photo': petPhoto,
         'tanggal_lahir': birthDate,
         'warna_ciri': colorMarks,
         'status_steril': sterilized,
         'alergi': alergi,
+        'additional_photos': jsonEncode(additionalPhotos),
       });
 
       if (savedId != null) {
@@ -132,7 +225,8 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
             'Upload Foto Hewan',
             'Identitas Hewan',
             'Fisik Hewan',
-            'Riwayat Kesehatan'
+            'Riwayat Kesehatan',
+            'Ringkasan Hewan'
           ][pageIndex],
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
@@ -154,6 +248,7 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
                 _buildIdentitasStep(),
                 _buildFisikStep(),
                 _buildRiwayatStep(),
+                _buildRingkasanStep(),
               ],
             ),
           ),
@@ -169,7 +264,7 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
               ),
               child: saving
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : Text(pageIndex == 4 ? 'Selesai' : 'Lanjut',
+                  : Text(pageIndex == 5 ? 'Simpan' : 'Lanjut',
                       style: const TextStyle(
                           fontWeight: FontWeight.bold, fontSize: 16)),
             ),
@@ -336,11 +431,16 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
               shape: BoxShape.circle,
               border: Border.all(color: const Color(0xFFE6F4F8), width: 2),
             ),
-            child: const CircleAvatar(
-              radius: 64,
-              backgroundColor: Color(0xFFE6F4F8),
-              child: Icon(Icons.camera_alt, color: Color(0xFF45A5C7), size: 48),
-            ),
+            child: petPhoto.isNotEmpty
+                ? CircleAvatar(
+                    radius: 64,
+                    backgroundImage: FileImage(File(petPhoto)),
+                  )
+                : const CircleAvatar(
+                    radius: 64,
+                    backgroundColor: Color(0xFFE6F4F8),
+                    child: Icon(Icons.camera_alt, color: Color(0xFF45A5C7), size: 48),
+                  ),
           ),
           const SizedBox(height: 32),
           const Text(
@@ -359,7 +459,7 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
           ),
           const SizedBox(height: 32),
           OutlinedButton(
-            onPressed: () {},
+            onPressed: () => _pickImage(ImageSource.gallery),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, 50),
               side: const BorderSide(color: Color(0xFF45A5C7)),
@@ -372,11 +472,104 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
           ),
           const SizedBox(height: 16),
           TextButton.icon(
-            onPressed: () {},
+            onPressed: () => _pickImage(ImageSource.camera),
             icon: const Icon(Icons.add, color: Color(0xFF0F2646)),
             label: const Text('Atau ambil foto',
                 style: TextStyle(
                     fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
+          ),
+          const SizedBox(height: 32),
+          const Divider(),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Foto Tambahan (Max 10)',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
+              Text('${additionalPhotos.length}/10',
+                  style: const TextStyle(color: Color(0xFF7A93AA))),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.start,
+            children: [
+              ...additionalPhotos.asMap().entries.map((entry) {
+                int idx = entry.key;
+                String path = entry.value;
+                return Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(File(path),
+                          width: 80, height: 80, fit: BoxFit.cover),
+                    ),
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            additionalPhotos.removeAt(idx);
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                              color: Colors.white, shape: BoxShape.circle),
+                          child: const Icon(Icons.close, size: 16, color: Colors.red),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+              if (additionalPhotos.length < 10)
+                GestureDetector(
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (BuildContext bc) {
+                        return SafeArea(
+                          child: Wrap(
+                            children: <Widget>[
+                              ListTile(
+                                leading: const Icon(Icons.photo_library),
+                                title: const Text('Galeri'),
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                  _pickAdditionalImages();
+                                },
+                              ),
+                              ListTile(
+                                leading: const Icon(Icons.photo_camera),
+                                title: const Text('Kamera'),
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                  _pickAdditionalImageCamera();
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    );
+                  },
+                  child: Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE6F4F8),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF45A5C7)),
+                    ),
+                    child: const Icon(Icons.add_a_photo, color: Color(0xFF45A5C7)),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 48),
           Container(
@@ -527,6 +720,9 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
                   fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
           const SizedBox(height: 8),
           TextFormField(
+            controller: _birthDateController,
+            readOnly: true,
+            onTap: () => _selectDate(context),
             decoration: InputDecoration(
               hintText: 'Pilih tanggal lahir',
               prefixIcon: const Icon(Icons.calendar_today_outlined,
@@ -546,8 +742,10 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
                   fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
           const SizedBox(height: 8),
           TextFormField(
+            controller: _ageController,
+            readOnly: true,
             decoration: InputDecoration(
-              hintText: '2',
+              hintText: '0',
               suffixText: 'Tahun',
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -749,6 +947,58 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildRingkasanStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFE6F4F8), width: 2),
+            ),
+            child: petPhoto.isNotEmpty
+                ? CircleAvatar(
+                    radius: 48,
+                    backgroundImage: FileImage(File(petPhoto)),
+                  )
+                : const CircleAvatar(
+                    radius: 48,
+                    backgroundColor: Color(0xFF45A5C7),
+                    child: Icon(Icons.pets, color: Colors.white, size: 48),
+                  ),
+          ),
+          const SizedBox(height: 32),
+          _buildSummaryRow('Nama', name),
+          const SizedBox(height: 16),
+          _buildSummaryRow('Jenis Hewan', species),
+          const SizedBox(height: 16),
+          _buildSummaryRow('Ras', breed),
+          const SizedBox(height: 16),
+          _buildSummaryRow('Jenis Kelamin', gender),
+          const SizedBox(height: 16),
+          _buildSummaryRow('Tanggal Lahir', birthDate.isNotEmpty ? birthDate : '-'),
+          const SizedBox(height: 16),
+          _buildSummaryRow('Umur', age.isNotEmpty ? '$age Tahun' : '-'),
+          const SizedBox(height: 16),
+          _buildSummaryRow('Berat Badan', weight.isNotEmpty ? '$weight kg' : '-'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(color: Color(0xFF0F2646), fontWeight: FontWeight.bold, fontSize: 14)),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F2646), fontSize: 14)),
+      ],
     );
   }
 }

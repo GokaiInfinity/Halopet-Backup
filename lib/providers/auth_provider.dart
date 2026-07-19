@@ -25,7 +25,8 @@ class AuthProvider extends ChangeNotifier {
         name: prefs.getString('name') ?? '',
         email: prefs.getString('email') ?? '',
         phone: prefs.getString('phone') ?? '',
-        role: prefs.getString('role') ?? 'owner');
+        role: prefs.getString('role') ?? 'owner',
+        photo: prefs.getString('photo') ?? '');
     notifyListeners();
   }
 
@@ -64,9 +65,14 @@ class AuthProvider extends ChangeNotifier {
           name: name, email: email, password: password, phone: phone);
       return login(email, password);
     } catch (e) {
-      error = e.toString().contains('UNIQUE')
-          ? 'Email sudah digunakan.'
-          : 'Registrasi gagal: $e';
+      String msg = e.toString();
+      if (msg.contains('Exception: ')) {
+        error = msg.split('Exception: ').last;
+      } else if (msg.contains('UNIQUE')) {
+        error = 'Email sudah terdaftar.';
+      } else {
+        error = 'Registrasi gagal: $msg';
+      }
       return false;
     } finally {
       loading = false;
@@ -87,5 +93,31 @@ class AuthProvider extends ChangeNotifier {
     await prefs.setString('email', value.email);
     await prefs.setString('phone', value.phone);
     await prefs.setString('role', value.role);
+    await prefs.setString('photo', value.photo);
+  }
+
+  Future<bool> updateProfile(String name, String phone, String photo) async {
+    if (user == null) return false;
+    loading = true;
+    error = null;
+    notifyListeners();
+    try {
+      await DatabaseHelper.instance.updateUserProfile(user!.id, name, phone, photo);
+      user = AppUser(
+          id: user!.id,
+          name: name,
+          email: user!.email,
+          phone: phone,
+          role: user!.role,
+          photo: photo);
+      await _saveSession(user!);
+      return true;
+    } catch (e) {
+      error = 'Gagal memperbarui profil: $e';
+      return false;
+    } finally {
+      loading = false;
+      notifyListeners();
+    }
   }
 }

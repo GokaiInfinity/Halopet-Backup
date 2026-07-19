@@ -40,6 +40,7 @@ class AppRoutes {
   static const chat = '/owner/chat';
   static const ownerMedical = '/owner/medical';
   static const ownerProfile = '/owner/profile';
+  static const editProfile = '/owner/edit-profile';
 
   static const doctorHome = '/doctor';
   static const doctorNotifications = '/doctor/notifications';

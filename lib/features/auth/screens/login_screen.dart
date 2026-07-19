@@ -267,7 +267,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const Text('Belum punya akun?',
                       style: TextStyle(color: Color(0xFF7A93AA), fontSize: 14)),
                   TextButton(
-                    onPressed: () => Navigator.pushReplacementNamed(
+                    onPressed: () => Navigator.pushNamed(
                         context, AppRoutes.register),
                     child: const Text('Daftar sekarang',
                         style: TextStyle(

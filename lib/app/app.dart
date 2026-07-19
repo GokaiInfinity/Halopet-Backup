@@ -15,6 +15,7 @@ import '../features/owner/state_demo_screen.dart';
 import '../features/owner/telemedicine_flow_screens.dart';
 import '../features/owner/review_form_screen.dart';
 import '../features/owner/help_center_screen.dart';
+import '../features/profile/screens/edit_profile_screen.dart';
 import '../features/admin/admin_tickets_screen.dart';
 import '../core/widgets/common_widgets.dart';
 import 'routes.dart';
@@ -124,6 +125,8 @@ class HaloPetApp extends StatelessWidget {
             return _page(const OwnerMedicalRecordsScreen());
           case AppRoutes.ownerProfile:
             return _page(const OwnerProfileScreen());
+          case AppRoutes.editProfile:
+            return _page(const EditProfileScreen());
           case AppRoutes.doctorHome:
             return _page(const DoctorDashboardScreen());
           case AppRoutes.doctorNotifications:

@@ -1,8 +1,61 @@
+import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../providers/pet_provider.dart';
 import '../../app/routes.dart';
+
+enum QuestionType { text, radio, checkbox, yesNo }
+
+class ConsultationQuestion {
+  final String key;
+  final String question;
+  final QuestionType type;
+  final List<String> options;
+
+  ConsultationQuestion({
+    required this.key,
+    required this.question,
+    required this.type,
+    this.options = const [],
+  });
+}
+
+final Map<String, Map<String, List<ConsultationQuestion>>> serviceConfig = {
+  'Keluhan Kesehatan Umum': {
+    'Wajib': [
+      ConsultationQuestion(key: 'keluhan_utama', question: 'Keluhan utama apa yang sedang dialami?', type: QuestionType.text),
+      ConsultationQuestion(key: 'sejak_kapan', question: 'Sejak kapan keluhan muncul?', type: QuestionType.radio, options: ['Kurang dari 24 jam', '1 - 3 hari', 'Lebih dari 3 hari']),
+      ConsultationQuestion(key: 'muncul_tiba_tiba', question: 'Apakah keluhan muncul tiba-tiba atau bertahap?', type: QuestionType.radio, options: ['Tiba-tiba', 'Bertahap']),
+      ConsultationQuestion(key: 'masih_makan', question: 'Apakah hewan masih mau makan?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'masih_minum', question: 'Apakah hewan masih mau minum?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'terlihat_lemas', question: 'Apakah hewan terlihat lemas?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'mengalami_muntah', question: 'Apakah hewan mengalami muntah?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'mengalami_diare', question: 'Apakah hewan mengalami diare?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'batuk_bersin_sesak', question: 'Apakah ada batuk, bersin, atau sesak napas?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'suhu_panas', question: 'Apakah suhu tubuh hewan terasa panas?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'masih_aktif', question: 'Apakah hewan masih aktif seperti biasa?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'perubahan_perilaku', question: 'Apakah ada perubahan perilaku?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'pernah_keluhan_sama', question: 'Apakah sebelumnya pernah mengalami keluhan yang sama?', type: QuestionType.yesNo),
+    ],
+    'Tambahan': [
+      ConsultationQuestion(key: 'pernah_diberi_obat', question: 'Apakah hewan pernah diberi obat sebelumnya?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'obat_apa', question: 'Obat apa yang sudah diberikan?', type: QuestionType.text),
+      ConsultationQuestion(key: 'hewan_lain_sakit', question: 'Apakah ada hewan lain di rumah yang sakit?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'baru_bepergian', question: 'Apakah hewan baru saja bepergian atau keluar rumah?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'perubahan_makanan', question: 'Apakah ada perubahan makanan dalam beberapa hari terakhir?', type: QuestionType.yesNo),
+    ],
+    'Darurat': [
+      ConsultationQuestion(key: 'sulit_bernapas', question: 'Apakah hewan sulit bernapas?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'kejang', question: 'Apakah hewan kejang?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'tidak_sadar', question: 'Apakah hewan tidak sadar atau sangat lemas?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'muntah_diare_berdarah', question: 'Apakah ada muntah/diare berdarah?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'tidak_bisa_berdiri', question: 'Apakah hewan tidak bisa berdiri?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'tidak_buang_air_kecil', question: 'Apakah hewan tidak buang air kecil lebih dari 24 jam?', type: QuestionType.yesNo),
+    ]
+  },
+};
 
 class ConsultationWizardScreen extends StatefulWidget {
   const ConsultationWizardScreen({super.key});
@@ -12,39 +65,37 @@ class ConsultationWizardScreen extends StatefulWidget {
       _ConsultationWizardScreenState();
 }
 
-class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> {
+class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> with TickerProviderStateMixin {
   final PageController _pageController = PageController();
+  late TabController _tabController;
   int _currentPage = 0;
 
   // State
   Map<String, Object?>? selectedPet;
   String? selectedService;
-  List<String> mainComplaints = [];
-  String? duration;
-  String? appetite;
-  String? activity;
+  
+  // Dynamic form answers
+  Map<String, dynamic> formAnswers = {};
+  
+  // Form keys
+  final _formKey = GlobalKey<FormState>();
 
-  // Additional Complaints Form
-  final _additionalFormKey = GlobalKey<FormState>();
-  String urine = '';
-  String feces = '';
-  bool vomit = false;
-  String respiratory = '';
-  String skinCoat = '';
-  String medication = '';
+  // Uploaded media
+  List<String> consultationPhotos = [];
+  List<String> consultationVideos = [];
 
-  // Screening Answers
-  Map<String, bool> screeningAnswers = {
-    'Kesulitan bernapas?': false,
-    'Kejang / Kejang-kejang?': false,
-    'Tidak sadar / Pingsan?': false,
-    'Perdarahan berat?': false,
-    'Trauma berat (kecelakaan)?': false,
-    'Tidak dapat berdiri?': false,
-    'Keracunan?': false,
-    'Tidak dapat buang air kecil?': false,
-    'Muntah atau diare terus-menerus?': false,
-  };
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _pageController.dispose();
+    super.dispose();
+  }
 
   void _next() {
     if (_currentPage == 0 && selectedPet == null) {
@@ -65,51 +116,25 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> {
           const SnackBar(content: Text('Pilih layanan terlebih dahulu.')));
       return;
     }
-    if (_currentPage == 4 && mainComplaints.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pilih minimal 1 keluhan utama.')));
-      return;
-    }
-    if (_currentPage == 5 && duration == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pilih waktu munculnya keluhan.')));
-      return;
-    }
-    if (_currentPage == 6 && (appetite == null || activity == null)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Pilih kondisi nafsu makan dan aktivitas.')));
-      return;
-    }
-    if (_currentPage == 7) {
-      if (!_additionalFormKey.currentState!.validate()) return;
-      _additionalFormKey.currentState!.save();
-    }
-
-    // Evaluate screening if at step 10 (Result is step 11)
-    if (_currentPage == 10) {
-      bool isDarurat =
-          screeningAnswers.values.any((element) => element == true);
-      // Let's assume if appetite is "Tidak mau makan" or activity is "Sangat lemah", it's Sedang, else Ringan
-      String category = 'Ringan';
-      if (isDarurat) {
-        category = 'Darurat';
-      } else if (appetite == 'Tidak mau makan' ||
-          activity == 'Sangat lemah / Tidak aktif') {
-        category = 'Sedang';
-      }
-
-      _pageController.nextPage(
-          duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-      return;
-    }
 
     _pageController.nextPage(
         duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
   }
 
   void _prev() {
+    if (_currentPage == 4 && _tabController.index > 0) {
+      _tabController.animateTo(_tabController.index - 1);
+      return;
+    }
     _pageController.previousPage(
         duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+  }
+
+  int get _currentStep {
+    if (_currentPage == 0) return 0; // Hewan
+    if (_currentPage >= 1 && _currentPage <= 3) return 1; // Layanan
+    if (_currentPage == 4) return 2; // Kuesioner
+    return 3; // Selesai
   }
 
   @override
@@ -129,23 +154,25 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> {
         title: Text(_getAppBarTitle()),
         centerTitle: true,
       ),
-      body: PageView(
-        controller: _pageController,
-        physics: const NeverScrollableScrollPhysics(),
-        onPageChanged: (idx) => setState(() => _currentPage = idx),
+      body: Column(
         children: [
-          _buildPilihHewan(),
-          _buildPilihLayanan(),
-          _buildDetailLayanan(),
-          _buildInfoBatas(),
-          _buildKeluhanUtama(),
-          _buildWaktuMuncul(),
-          _buildNafsuDanAktivitas(),
-          _buildGejalaLanjutan(),
-          _buildUploadFoto(),
-          _buildRingkasan(),
-          _buildSkrining(),
-          _buildHasilSkrining(),
+          _buildStepper(),
+          Expanded(
+            child: PageView(
+              controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(),
+              onPageChanged: (idx) => setState(() => _currentPage = idx),
+              children: [
+                _buildPilihHewan(), // 0
+                _buildPilihLayanan(), // 1
+                _buildDetailLayanan(), // 2
+                _buildInfoBatas(), // 3
+                _buildKuesionerMedis(), // 4
+                _buildRingkasan(), // 5
+                _buildHasilSkrining(), // 6
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -162,49 +189,81 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> {
       case 3:
         return 'Info Batas Telemedicine';
       case 4:
-        return 'Keluhan Utama';
+        return 'Kuesioner Medis';
       case 5:
-        return 'Waktu Muncul Keluhan';
-      case 6:
-        return 'Nafsu Makan & Aktivitas';
-      case 7:
-        return 'Gejala Lanjutan';
-      case 8:
-        return 'Upload Foto/Video';
-      case 9:
         return 'Ringkasan Keluhan';
-      case 10:
-        return 'Skrining Darurat';
-      case 11:
+      case 6:
         return 'Hasil Skrining';
       default:
         return 'Konsultasi';
     }
   }
 
-  Widget _buildStepIndicator(int current, int total) {
+  Widget _buildStepper() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(total, (i) {
-          final active = i <= current;
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: active ? const Color(0xFF45A5C7) : const Color(0xFFF0F4F8),
-            ),
-            alignment: Alignment.center,
-            child: Text('${i + 1}',
-                style: TextStyle(
-                    color: active ? Colors.white : const Color(0xFF7A93AA),
-                    fontWeight: FontWeight.bold)),
-          );
-        }),
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _buildStepItem(0, 'Hewan'),
+          _buildLine(0),
+          _buildStepItem(1, 'Layanan'),
+          _buildLine(1),
+          _buildStepItem(2, 'Kuesioner'),
+          _buildLine(2),
+          _buildStepItem(3, 'Selesai'),
+        ],
       ),
+    );
+  }
+
+  Widget _buildLine(int stepIndex) {
+    return Expanded(
+      child: Container(
+        height: 2,
+        color: _currentStep > stepIndex
+            ? const Color(0xFF4CAF50)
+            : const Color(0xFFE0E5EC),
+      ),
+    );
+  }
+
+  Widget _buildStepItem(int stepIndex, String label) {
+    final isCompleted = _currentStep > stepIndex;
+    final isActive = _currentStep == stepIndex;
+
+    return Column(
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: isCompleted
+                ? const Color(0xFF4CAF50)
+                : isActive
+                    ? const Color(0xFF45A5C7)
+                    : const Color(0xFFE0E5EC),
+            shape: BoxShape.circle,
+          ),
+          child: isCompleted
+              ? const Icon(Icons.check, color: Colors.white, size: 16)
+              : Center(
+                  child: Text('${stepIndex + 1}',
+                      style: TextStyle(
+                          color:
+                              isActive ? Colors.white : const Color(0xFF7A93AA),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold))),
+        ),
+        const SizedBox(height: 8),
+        Text(label,
+            style: TextStyle(
+                color: isActive
+                    ? const Color(0xFF45A5C7)
+                    : const Color(0xFF7A93AA),
+                fontSize: 10,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.normal)),
+      ],
     );
   }
 
@@ -505,276 +564,250 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> {
     );
   }
 
-  // ==== STEP 4: KELUHAN UTAMA ====
-  Widget _buildKeluhanUtama() {
-    final options = [
-      'Batuk / Bersin',
-      'Muntah',
-      'Diare',
-      'Tidak Nafsu Makan',
-      'Lesu / Lemah',
-      'Gatal / Garuk-garuk',
-      'Lainnya'
-    ];
+  // ==== STEP 4: KUESIONER MEDIS (Wajib, Tambahan, Darurat) ====
+  Widget _buildKuesionerMedis() {
+    final serviceData = serviceConfig[selectedService] ?? {};
+    final tabs = ['Wajib', 'Tambahan', 'Darurat'];
+
     return Column(
       children: [
-        _buildStepIndicator(0, 5),
-        const Text('Apa keluhan utama hewanmu?',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        const Text('Pilih satu atau lebih keluhan yang dialami.',
-            style: TextStyle(color: Color(0xFF7A93AA), fontSize: 12)),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(24),
-            itemCount: options.length,
-            itemBuilder: (context, index) {
-              final opt = options[index];
-              final isChecked = mainComplaints.contains(opt);
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                      color: isChecked
-                          ? const Color(0xFF45A5C7)
-                          : const Color(0xFFE6F4F8)),
-                  borderRadius: BorderRadius.circular(12),
-                  color: isChecked ? const Color(0xFFE6F4F8) : Colors.white,
-                ),
-                child: CheckboxListTile(
-                  title: Text(opt,
-                      style: TextStyle(
-                          fontWeight:
-                              isChecked ? FontWeight.bold : FontWeight.normal)),
-                  value: isChecked,
-                  activeColor: const Color(0xFF45A5C7),
-                  onChanged: (val) {
-                    setState(() {
-                      if (val == true) {
-                        mainComplaints.add(opt);
-                      } else {
-                        mainComplaints.remove(opt);
-                      }
-                    });
-                  },
-                ),
-              );
-            },
+        const SizedBox(height: 16),
+        IgnorePointer(
+          ignoring: true,
+          child: TabBar(
+            controller: _tabController,
+            labelColor: const Color(0xFF45A5C7),
+            unselectedLabelColor: const Color(0xFF7A93AA),
+            indicatorColor: const Color(0xFF45A5C7),
+            tabs: tabs.map((t) => Tab(text: t)).toList(),
           ),
         ),
-        _buildFooter('Lanjut', _next),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            physics: const NeverScrollableScrollPhysics(),
+            children: tabs.map((tab) {
+              final questions = serviceData[tab] ?? [];
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: tab == 'Wajib' ? _formKey : null,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (questions.isEmpty)
+                        const Text('Belum ada daftar pertanyaan untuk bagian ini.', style: TextStyle(color: Colors.grey)),
+                      ...questions.map((q) => _buildDynamicQuestion(q, isWajib: tab == 'Wajib', isDarurat: tab == 'Darurat')),
+                      if (tab == 'Tambahan') ...[
+                        const SizedBox(height: 32),
+                        _buildUploadFotoSection(),
+                      ]
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        AnimatedBuilder(
+          animation: _tabController,
+          builder: (context, child) {
+            String btnText = 'Lanjut ke Tambahan';
+            if (_tabController.index == 1) btnText = 'Lanjut ke Darurat';
+            if (_tabController.index == 2) btnText = 'Lanjut ke Ringkasan';
+
+            return _buildFooter(btnText, () {
+              if (_tabController.index == 0) {
+                if (_formKey.currentState != null && !_formKey.currentState!.validate()) return;
+                
+                // Manual validation for all required fields (radio, yes/no)
+                final wajibQuestions = serviceConfig[selectedService]?['Wajib'] ?? [];
+                for (var q in wajibQuestions) {
+                  if (formAnswers[q.key] == null || formAnswers[q.key].toString().trim().isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Harap jawab pertanyaan: ${q.question}')));
+                    return;
+                  }
+                }
+                
+                if (_formKey.currentState != null) _formKey.currentState!.save();
+                _tabController.animateTo(1);
+              } else if (_tabController.index == 1) {
+                _tabController.animateTo(2);
+              } else {
+                if (_isEmergency()) {
+                  _showEmergencyDialog();
+                } else {
+                  _next();
+                }
+              }
+            });
+          },
+        ),
       ],
     );
   }
 
-  // ==== STEP 5: WAKTU MUNCUL ====
-  Widget _buildWaktuMuncul() {
-    final options = [
-      '< 12 Jam',
-      '12 - 24 Jam',
-      '1 - 3 hari',
-      '3 - 7 hari',
-      '> 7 hari'
-    ];
-    return Column(
-      children: [
-        _buildStepIndicator(1, 5),
-        const Text('Kapan keluhan mulai muncul?',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(24),
-            itemCount: options.length,
-            itemBuilder: (context, index) {
-              final opt = options[index];
-              final isSelected = duration == opt;
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                      color: isSelected
-                          ? const Color(0xFF45A5C7)
-                          : const Color(0xFFE6F4F8)),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: RadioListTile<String>(
+  void _showEmergencyDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: const [
+            Icon(Icons.warning, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Kondisi Darurat', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        content: const Text(
+            'Hewan terindikasi dalam kondisi darurat yang membutuhkan penanganan segera!\n\nSistem akan mengarahkan Anda ke daftar dokter untuk ditangani secara langsung.'),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              _goToDoctorList(); // Go to doctor list immediately
+            },
+            child: const Text('Cari Dokter', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDynamicQuestion(ConsultationQuestion q, {bool isWajib = false, bool isDarurat = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(q.question, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 12),
+          if (q.type == QuestionType.text)
+            TextFormField(
+              initialValue: formAnswers[q.key] as String?,
+              decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Ketik jawaban di sini...'),
+              onChanged: (val) => formAnswers[q.key] = val,
+              validator: (val) {
+                if (isWajib && (val == null || val.isEmpty)) return 'Wajib diisi';
+                return null;
+              },
+            )
+          else if (q.type == QuestionType.radio)
+            ...q.options.map((opt) => RadioListTile<String>(
                   title: Text(opt),
                   value: opt,
-                  groupValue: duration,
+                  toggleable: true,
+                  groupValue: formAnswers[q.key] as String?,
                   activeColor: const Color(0xFF45A5C7),
-                  onChanged: (val) => setState(() => duration = val),
-                ),
-              );
-            },
-          ),
-        ),
-        _buildFooter('Lanjut', _next),
-      ],
-    );
-  }
-
-  // ==== STEP 6: NAFSU MAKAN & AKTIVITAS ====
-  Widget _buildNafsuDanAktivitas() {
-    final makanOpts = [
-      'Baik seperti biasa',
-      'Sedikit berkurang',
-      'Sangat berkurang',
-      'Tidak mau makan'
-    ];
-    final aktifOpts = [
-      'Aktif seperti biasa',
-      'Sedikit menurun',
-      'Malas / Lesu',
-      'Sangat lemah / Tidak aktif'
-    ];
-
-    return Column(
-      children: [
-        _buildStepIndicator(2, 5), // Treat as step 3
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+                  onChanged: (val) => setState(() => formAnswers[q.key] = val),
+                ))
+          else if (q.type == QuestionType.yesNo)
+            Row(
               children: [
-                const Text('Bagaimana nafsu makan hewanmu?',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 12),
-                ...makanOpts.map((opt) => RadioListTile<String>(
-                      title: Text(opt),
-                      value: opt,
-                      groupValue: appetite,
-                      activeColor: const Color(0xFF45A5C7),
-                      onChanged: (val) => setState(() => appetite = val),
-                    )),
-                const SizedBox(height: 24),
-                const Text('Bagaimana tingkat aktivitasnya?',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 12),
-                ...aktifOpts.map((opt) => RadioListTile<String>(
-                      title: Text(opt),
-                      value: opt,
-                      groupValue: activity,
-                      activeColor: const Color(0xFF45A5C7),
-                      onChanged: (val) => setState(() => activity = val),
-                    )),
+                Expanded(
+                  child: RadioListTile<bool>(
+                    title: const Text('Ya'),
+                    value: true,
+                    toggleable: true,
+                    groupValue: formAnswers[q.key] as bool?,
+                    activeColor: const Color(0xFF45A5C7),
+                    onChanged: (val) {
+                      setState(() => formAnswers[q.key] = val);
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: RadioListTile<bool>(
+                    title: const Text('Tidak'),
+                    value: false,
+                    toggleable: true,
+                    groupValue: formAnswers[q.key] as bool?,
+                    activeColor: const Color(0xFF45A5C7),
+                    onChanged: (val) => setState(() => formAnswers[q.key] = val),
+                  ),
+                ),
               ],
             ),
-          ),
-        ),
-        _buildFooter('Lanjut', _next),
-      ],
+        ],
+      ),
     );
   }
 
-  // ==== STEP 7: GEJALA LANJUTAN ====
-  Widget _buildGejalaLanjutan() {
+  Widget _buildUploadFotoSection() {
     return Column(
       children: [
-        _buildStepIndicator(3, 5),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _additionalFormKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Lengkapi form gejala lanjutan (Opsional)',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    decoration: const InputDecoration(
-                        labelText: 'Kondisi buang air kecil',
-                        border: OutlineInputBorder()),
-                    onSaved: (val) => urine = val ?? '',
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    decoration: const InputDecoration(
-                        labelText: 'Kondisi buang air besar',
-                        border: OutlineInputBorder()),
-                    onSaved: (val) => feces = val ?? '',
-                  ),
-                  const SizedBox(height: 12),
-                  SwitchListTile(
-                    title: const Text('Muntah atau tidak?'),
-                    value: vomit,
-                    onChanged: (val) => setState(() => vomit = val),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    decoration: const InputDecoration(
-                        labelText: 'Batuk, bersin, atau sesak napas',
-                        border: OutlineInputBorder()),
-                    onSaved: (val) => respiratory = val ?? '',
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    decoration: const InputDecoration(
-                        labelText: 'Kondisi kulit dan bulu',
-                        border: OutlineInputBorder()),
-                    onSaved: (val) => skinCoat = val ?? '',
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    decoration: const InputDecoration(
-                        labelText: 'Obat yang sedang dikonsumsi',
-                        border: OutlineInputBorder()),
-                    onSaved: (val) => medication = val ?? '',
-                  ),
-                ],
-              ),
-            ),
-          ),
+        const Text('Unggah Foto / Video (Opsional)',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        const SizedBox(height: 8),
+        const Text(
+            'Foto atau video membantu dokter\nmemahami kondisi hewan lebih baik.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Color(0xFF7A93AA))),
+        const SizedBox(height: 32),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildUploadBox(
+                Icons.camera_alt, 'Tambah Foto', 'Maks. 5 MB', () => _showUploadMenu(context, isVideo: false)),
+            const SizedBox(width: 16),
+            _buildUploadBox(
+                Icons.videocam, 'Tambah Video', 'Maks. 20 MB', () => _showUploadMenu(context, isVideo: true)),
+          ],
         ),
-        _buildFooter('Lanjut', _next),
+        if (consultationPhotos.isNotEmpty || consultationVideos.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ...consultationPhotos.map((path) => _buildMediaThumbnail(path, false)),
+              ...consultationVideos.map((path) => _buildMediaThumbnail(path, true)),
+            ],
+          ),
+        ]
       ],
     );
   }
 
-  // ==== STEP 8: UPLOAD FOTO ====
-  Widget _buildUploadFoto() {
-    return Column(
-      children: [
-        _buildStepIndicator(4, 5),
-        Expanded(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('Unggah Foto / Video (Opsional)',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                const SizedBox(height: 8),
-                const Text(
-                    'Foto atau video membantu dokter\nmemahami kondisi hewan lebih baik.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Color(0xFF7A93AA))),
-                const SizedBox(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildUploadBox(
-                        Icons.camera_alt, 'Tambah Foto', 'Maks. 5 MB', () => _showUploadMenu(context)),
-                    const SizedBox(width: 16),
-                    _buildUploadBox(
-                        Icons.videocam, 'Tambah Video', 'Maks. 20 MB', () => _showUploadMenu(context)),
-                  ],
-                ),
-                // (Mocking the list of uploaded files, we can just skip for now)
-              ],
-            ),
-          ),
-        ),
-        _buildFooter('Lanjut', _next),
-      ],
-    );
+  Future<void> _pickMedia(bool isVideo, ImageSource source) async {
+    final picker = ImagePicker();
+    try {
+      if (isVideo) {
+        final pickedFile = await picker.pickVideo(source: source);
+        if (pickedFile != null) {
+          setState(() {
+            consultationVideos.add(pickedFile.path);
+          });
+        }
+      } else {
+        if (source == ImageSource.gallery) {
+          final pickedFiles = await picker.pickMultiImage();
+          if (pickedFiles.isNotEmpty) {
+            setState(() {
+              consultationPhotos.addAll(pickedFiles.map((e) => e.path));
+            });
+          }
+        } else {
+          final pickedFile = await picker.pickImage(source: source);
+          if (pickedFile != null) {
+            setState(() {
+              consultationPhotos.add(pickedFile.path);
+            });
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Fitur kamera tidak didukung di perangkat ini (Windows/Desktop). Silakan pilih dari Galeri.')),
+        );
+      }
+    }
   }
 
-  void _showUploadMenu(BuildContext context) {
+  void _showUploadMenu(BuildContext context, {required bool isVideo}) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -793,8 +826,7 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> {
               title: const Text('Kamera'),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Foto berhasil diunggah!')));
+                _pickMedia(isVideo, ImageSource.camera);
               },
             ),
             ListTile(
@@ -802,8 +834,7 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> {
               title: const Text('Galeri'),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Foto berhasil diunggah!')));
+                _pickMedia(isVideo, ImageSource.gallery);
               },
             ),
           ],
@@ -812,17 +843,63 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> {
     );
   }
 
-  Widget _buildUploadBox(IconData icon, String title, String subtitle, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 120,
-        height: 120,
-        decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFE6F4F8), width: 2),
-          borderRadius: BorderRadius.circular(16),
+  Widget _buildMediaThumbnail(String path, bool isVideo) {
+    return Stack(
+      children: [
+        Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: isVideo 
+            ? const Icon(Icons.videocam, color: Colors.grey, size: 40)
+            : ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.file(File(path), fit: BoxFit.cover),
+              ),
         ),
-        child: Column(
+        Positioned(
+          top: 4,
+          right: 4,
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                if (isVideo) {
+                  consultationVideos.remove(path);
+                } else {
+                  consultationPhotos.remove(path);
+                }
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+              child: const Icon(Icons.close, size: 16, color: Colors.red),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUploadBox(IconData icon, String title, String subtitle, VoidCallback onTap) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        splashColor: const Color(0xFF45A5C7).withOpacity(0.2),
+        highlightColor: const Color(0xFF45A5C7).withOpacity(0.1),
+        child: Container(
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFFE6F4F8), width: 2),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, color: const Color(0xFF45A5C7), size: 32),
@@ -837,14 +914,14 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
-  // ==== STEP 9: RINGKASAN ====
+  // ==== STEP 5: RINGKASAN ====
   Widget _buildRingkasan() {
     return Column(
       children: [
-        _buildStepIndicator(4, 5), // Or we hide step indicator here
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -880,10 +957,10 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> {
                   const SizedBox(height: 24),
                 ],
                 _buildRingkasanRow('Layanan', selectedService ?? '-'),
-                _buildRingkasanRow('Keluhan Utama', mainComplaints.join(', ')),
-                _buildRingkasanRow('Waktu Muncul', duration ?? '-'),
-                _buildRingkasanRow('Nafsu Makan', appetite ?? '-'),
-                _buildRingkasanRow('Aktivitas', activity ?? '-'),
+                ...formAnswers.entries.map((e) {
+                  return _buildRingkasanRow(
+                      _getQuestionLabel(e.key), e.value.toString());
+                }),
                 const SizedBox(height: 24),
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -912,7 +989,21 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> {
     );
   }
 
+  String _getQuestionLabel(String key) {
+    if (selectedService == null) return key;
+    final data = serviceConfig[selectedService] ?? {};
+    for (var tab in data.values) {
+      for (var q in tab) {
+        if (q.key == key) return q.question;
+      }
+    }
+    return key;
+  }
+
   Widget _buildRingkasanRow(String label, String value) {
+    if (value == 'true') value = 'Ya';
+    if (value == 'false') value = 'Tidak';
+    if (value.isEmpty || value == 'null') value = '-';
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -921,83 +1012,20 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> {
           Expanded(
               flex: 2,
               child: Text(label,
-                  style: const TextStyle(color: Color(0xFF7A93AA)))),
+                  style: const TextStyle(color: Color(0xFF7A93AA), fontSize: 12))),
           Expanded(
               flex: 3,
               child: Text(value,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                   textAlign: TextAlign.right)),
         ],
       ),
     );
   }
 
-  // ==== STEP 10: SKRINING DARURAT ====
-  Widget _buildSkrining() {
-    return Column(
-      children: [
-        const Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-              'Jawab pertanyaan berikut untuk memastikan kondisi hewan aman untuk konsultasi online.',
-              style: TextStyle(color: Color(0xFF7A93AA))),
-        ),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            children: screeningAnswers.keys.map((q) {
-              final isYes = screeningAnswers[q]!;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                        child: Text(q,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold))),
-                    Row(
-                      children: [
-                        _buildChoiceBtn('Ya', isYes,
-                            () => setState(() => screeningAnswers[q] = true)),
-                        const SizedBox(width: 8),
-                        _buildChoiceBtn('Tidak', !isYes,
-                            () => setState(() => screeningAnswers[q] = false)),
-                      ],
-                    )
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-        _buildFooter('Selanjutnya', _next),
-      ],
-    );
-  }
-
-  Widget _buildChoiceBtn(String text, bool active, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: active ? const Color(0xFF45A5C7) : Colors.white,
-          border: Border.all(
-              color:
-                  active ? const Color(0xFF45A5C7) : const Color(0xFFE6F4F8)),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(text,
-            style: TextStyle(
-                color: active ? Colors.white : const Color(0xFF7A93AA),
-                fontWeight: FontWeight.bold)),
-      ),
-    );
-  }
-
-  // ==== STEP 11: HASIL SKRINING ====
+  // ==== STEP 6: HASIL SKRINING ====
   Widget _buildHasilSkrining() {
-    bool isDarurat = screeningAnswers.values.any((element) => element == true);
+    bool isDarurat = _isEmergency();
     String category = 'Ringan';
     Color iconColor = Colors.green;
     IconData icon = Icons.check_circle;
@@ -1010,13 +1038,6 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> {
       icon = Icons.warning;
       desc =
           'Hewanmu terindikasi dalam kondisi darurat!\nSegera lakukan tindakan dan cari pertolongan medis terdekat.';
-    } else if (appetite == 'Tidak mau makan' ||
-        activity == 'Sangat lemah / Tidak aktif') {
-      category = 'Sedang';
-      iconColor = Colors.orange;
-      icon = Icons.error;
-      desc =
-          'Hewanmu perlu diperhatikan dan dipantau.\n\nSegera konsultasi dengan dokter hewan dan pantau kondisinya secara berkala.';
     }
 
     return Padding(
@@ -1096,6 +1117,14 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> {
     );
   }
 
+  bool _isEmergency() {
+    final daruratKeys = serviceConfig[selectedService]?['Darurat']?.map((e) => e.key).toList() ?? [];
+    for (var key in daruratKeys) {
+      if (formAnswers[key] == true) return true;
+    }
+    return false;
+  }
+
   Widget _buildEmergencyAction(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -1111,50 +1140,21 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> {
   }
 
   void _goToDoctorList() {
-    // Determine category
-    bool isDarurat = screeningAnswers.values.any((element) => element == true);
-    String category = 'Ringan';
-    if (isDarurat)
-      category = 'Darurat';
-    else if (appetite == 'Tidak mau makan' ||
-        activity == 'Sangat lemah / Tidak aktif') category = 'Sedang';
+    bool isDarurat = _isEmergency();
+    String category = isDarurat ? 'Darurat' : 'Ringan';
 
-    // Prepare data to pass to DoctorListScreen
+    // Prepare JSON data to pass to DoctorListScreen
+    // Store JSON in 'main_complaints' to match existing SQLite schema without altering it
     final complaintData = {
       'service_type': selectedService,
-      'main_complaints': mainComplaints.join(', '),
-      'duration': duration,
-      'appetite': appetite,
-      'activity': activity,
-      'urine': urine,
-      'feces': feces,
-      'vomit': vomit ? 1 : 0,
-      'respiratory': respiratory,
-      'skin_coat': skinCoat,
-      'medication': medication,
-    };
-
-    // Map human readable questions to db columns
-    final screeningData = {
-      'difficulty_breathing': screeningAnswers['Kesulitan bernapas?']! ? 1 : 0,
-      'seizures': screeningAnswers['Kejang / Kejang-kejang?']! ? 1 : 0,
-      'unconscious': screeningAnswers['Tidak sadar / Pingsan?']! ? 1 : 0,
-      'heavy_bleeding': screeningAnswers['Perdarahan berat?']! ? 1 : 0,
-      'severe_trauma': screeningAnswers['Trauma berat (kecelakaan)?']! ? 1 : 0,
-      'cannot_stand': screeningAnswers['Tidak dapat berdiri?']! ? 1 : 0,
-      'poisoning': screeningAnswers['Keracunan?']! ? 1 : 0,
-      'cannot_urinate':
-          screeningAnswers['Tidak dapat buang air kecil?']! ? 1 : 0,
-      'continuous_vomiting':
-          screeningAnswers['Muntah atau diare terus-menerus?']! ? 1 : 0,
-      'result_category': category,
+      'main_complaints': jsonEncode(formAnswers),
     };
 
     Navigator.pushNamed(context, AppRoutes.doctorList, arguments: {
       'pet_id': selectedPet!['id'],
-      'complaint': mainComplaints.join(', '), // legacy map
+      'complaint': formAnswers['keluhan_utama'] ?? selectedService,
       'complaint_data': complaintData,
-      'screening_data': screeningData,
+      'screening_data': {'result_category': category},
     });
   }
 }

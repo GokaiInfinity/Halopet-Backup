@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -51,12 +52,17 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               // HEADER
               Row(
                 children: [
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundColor: const Color(0xFFE0E5EC),
-                    child: const Icon(Icons.person,
-                        color: Color(0xFFB0C4D9), size: 32),
-                  ),
+                  user.photo.isNotEmpty
+                      ? CircleAvatar(
+                          radius: 24,
+                          backgroundImage: FileImage(File(user.photo)),
+                        )
+                      : CircleAvatar(
+                          radius: 24,
+                          backgroundColor: const Color(0xFFE0E5EC),
+                          child: const Icon(Icons.person,
+                              color: Color(0xFFB0C4D9), size: 32),
+                        ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
@@ -191,71 +197,95 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     if (pet['species'].toString().toLowerCase().contains('kucing'))
       icon = Icons.catching_pokemon;
     return Container(
-      width: 100,
       margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0E5EC)),
-      ),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: const Color(0xFFFFF0D4),
-            child: Icon(icon, color: const Color(0xFFFFA000), size: 32),
+      child: Material(
+        color: Colors.transparent,
+        child: Ink(
+          width: 100,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE0E5EC)),
           ),
-          const SizedBox(height: 12),
-          Text(pet['name'],
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold, color: Color(0xFF0F2646)),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 4),
-          Text(pet['breed'].toString().isEmpty ? pet['species'] : pet['breed'],
-              style: const TextStyle(fontSize: 10, color: Color(0xFF7A93AA)),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 2),
-          Text('${pet['age']} Tahun',
-              style: const TextStyle(fontSize: 10, color: Color(0xFFB0C4D9))),
-        ],
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () {
+              Navigator.pushNamed(context, AppRoutes.petInfo, arguments: {
+                'pet': pet,
+                'tabIndex': 0,
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: const Color(0xFFFFF0D4),
+                    child: Icon(icon, color: const Color(0xFFFFA000), size: 32),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(pet['name'],
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, color: Color(0xFF0F2646)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 4),
+                  Text(pet['breed'].toString().isEmpty ? pet['species'] : pet['breed'],
+                      style: const TextStyle(fontSize: 10, color: Color(0xFF7A93AA)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  Text('${pet['age']} Tahun',
+                      style: const TextStyle(fontSize: 10, color: Color(0xFFB0C4D9))),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildAddPetCard(BuildContext context) {
-    return GestureDetector(
-      onTap: () async {
-        final ownerId = context.read<AuthProvider>().user!.id;
-        await Navigator.pushNamed(context, AppRoutes.petAdd);
-        if (mounted) context.read<PetProvider>().load(ownerId);
-      },
-      child: Container(
-        width: 100,
-        margin: const EdgeInsets.only(right: 12),
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF45A5C7)),
-        ),
-        child: Column(
-          children: [
-            const CircleAvatar(
-              radius: 28,
-              backgroundColor: Color(0xFFE6F4F8),
-              child: Icon(Icons.pets, color: Color(0xFF45A5C7), size: 24),
+    return Container(
+      margin: const EdgeInsets.only(right: 12),
+      child: Material(
+        color: Colors.transparent,
+        child: Ink(
+          width: 100,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF45A5C7)),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () async {
+              final ownerId = context.read<AuthProvider>().user!.id;
+              await Navigator.pushNamed(context, AppRoutes.petAdd);
+              if (mounted) context.read<PetProvider>().load(ownerId);
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+              child: Column(
+                children: [
+                  const CircleAvatar(
+                    radius: 28,
+                    backgroundColor: Color(0xFFE6F4F8),
+                    child: Icon(Icons.pets, color: Color(0xFF45A5C7), size: 24),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('Tambah\nHewan',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0F2646),
+                          fontSize: 12),
+                      textAlign: TextAlign.center),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
-            const Text('Tambah\nHewan',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F2646),
-                    fontSize: 12),
-                textAlign: TextAlign.center),
-          ],
+          ),
         ),
       ),
     );
@@ -265,23 +295,30 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       IconData icon, Color bgColor, Color iconColor, String label,
       {VoidCallback? onTap}) {
     return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: 26,
-              backgroundColor: bgColor,
-              child: Icon(icon, color: iconColor, size: 24),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 26,
+                  backgroundColor: bgColor,
+                  child: Icon(icon, color: iconColor, size: 24),
+                ),
+                const SizedBox(height: 8),
+                Text(label,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F2646))),
+              ],
             ),
-            const SizedBox(height: 8),
-            Text(label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0F2646))),
-          ],
+          ),
         ),
       ),
     );

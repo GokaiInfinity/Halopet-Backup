@@ -93,8 +93,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
             const SizedBox(height: 32),
             ElevatedButton(
-              onPressed: () => Navigator.pushReplacementNamed(
-                  context, AppRoutes.resetPassword),
+              onPressed: () {
+                if (email.text.isNotEmpty) {
+                  Navigator.pushNamed(context, AppRoutes.otp, arguments: {'email': email.text});
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Harap masukkan email atau nomor telepon')),
+                  );
+                }
+              },
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 50),
                 backgroundColor: const Color(0xFF45A5C7),

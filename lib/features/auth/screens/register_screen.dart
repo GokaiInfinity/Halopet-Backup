@@ -23,11 +23,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool obscure = true;
   bool agreeToTerms = false;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AuthProvider>().clearError();
+      }
+    });
+  }
+
   Future<void> submit() async {
     if (!form.currentState!.validate() || !agreeToTerms) return;
     final auth = context.read<AuthProvider>();
-    // For demo, we navigate to OTP screen upon registration
-    Navigator.pushNamed(context, AppRoutes.otp, arguments: {'email': email.text});
+    
+    final success = await auth.register(
+      name: name.text,
+      email: email.text,
+      password: password.text,
+      phone: phone.text,
+    );
+    
+    if (success && mounted) {
+      Navigator.pushNamed(context, AppRoutes.otp, arguments: {'email': email.text});
+    }
   }
 
   @override
@@ -142,7 +161,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         style:
                             TextStyle(color: Color(0xFF7A93AA), fontSize: 14)),
                     TextButton(
-                      onPressed: () => Navigator.pushReplacementNamed(
+                      onPressed: () => Navigator.pushNamed(
                           context, AppRoutes.login),
                       child: const Text('Masuk di sini',
                           style: TextStyle(

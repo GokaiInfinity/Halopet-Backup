@@ -4,12 +4,14 @@ class AppUser {
       required this.name,
       required this.email,
       required this.phone,
-      required this.role});
+      required this.role,
+      this.photo = ''});
   final int id;
   final String name;
   final String email;
   final String phone;
   final String role;
+  final String photo;
 
   factory AppUser.fromMap(Map<String, Object?> map) => AppUser(
         id: map['id'] as int,
@@ -17,6 +19,7 @@ class AppUser {
         email: map['email'] as String,
         phone: (map['phone'] as String?) ?? '',
         role: map['role'] as String,
+        photo: (map['photo'] as String?) ?? '',
       );
 }
 

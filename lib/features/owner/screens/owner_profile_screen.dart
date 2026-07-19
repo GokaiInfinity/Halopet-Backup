@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -18,13 +19,21 @@ class OwnerProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
-    if (user == null)
+    if (user == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return OwnerScaffold(
         title: 'Profil',
         index: 4,
         body: ListView(padding: const EdgeInsets.all(20), children: [
-          Center(child: AvatarInitials(user.name, radius: 50)),
+          Center(
+            child: user.photo.isNotEmpty
+                ? CircleAvatar(
+                    radius: 50,
+                    backgroundImage: FileImage(File(user.photo)),
+                  )
+                : AvatarInitials(user.name, radius: 50),
+          ),
           const SizedBox(height: 14),
           Center(
               child: Text(user.name,
@@ -33,6 +42,15 @@ class OwnerProfileScreen extends StatelessWidget {
           Center(
               child: Text(user.email,
                   style: const TextStyle(color: AppColors.muted))),
+          const SizedBox(height: 16),
+          Center(
+            child: OutlinedButton.icon(
+              onPressed: () =>
+                  Navigator.pushNamed(context, AppRoutes.editProfile),
+              icon: const Icon(Icons.edit, size: 16),
+              label: const Text('Edit Profil'),
+            ),
+          ),
           const SizedBox(height: 24),
           InfoCard(
               child: Column(children: [
@@ -57,9 +75,10 @@ class OwnerProfileScreen extends StatelessWidget {
           OutlinedButton.icon(
               onPressed: () async {
                 await context.read<AuthProvider>().logout();
-                if (context.mounted)
+                if (context.mounted) {
                   Navigator.pushNamedAndRemoveUntil(
                       context, AppRoutes.login, (_) => false);
+                }
               },
               icon: const Icon(Icons.logout),
               label: const Text('Keluar'))
