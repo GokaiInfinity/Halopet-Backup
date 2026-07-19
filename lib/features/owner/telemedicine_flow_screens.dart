@@ -148,26 +148,24 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
             icon: const Icon(Icons.call, color: Color(0xFF45A5C7)),
             onPressed: () {}, // Not implemented in mock
           ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Color(0xFF0F2646)),
-            onSelected: (val) {
-              if (val == 'end') {
-                final role = context.read<AuthProvider>().user?.role;
-                if (role == 'doctor') {
-                  Navigator.pushReplacementNamed(
-                      context, AppRoutes.doctorConsultationResultForm,
-                      arguments: widget.args);
-                } else {
-                  Navigator.pushReplacementNamed(
-                      context, AppRoutes.consultationResult,
-                      arguments: widget.args);
-                }
+          TextButton(
+            onPressed: () {
+              final role = context.read<AuthProvider>().user?.role;
+              if (role == 'doctor') {
+                Navigator.pushReplacementNamed(
+                    context, AppRoutes.doctorConsultationResultForm,
+                    arguments: widget.args);
+              } else {
+                Navigator.pushReplacementNamed(
+                    context, AppRoutes.consultationResult,
+                    arguments: widget.args);
               }
             },
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: 'end', child: Text('Akhiri Sesi')),
-            ],
+            child: const Text('Akhiri Sesi',
+                style: TextStyle(
+                    color: Colors.red, fontWeight: FontWeight.bold)),
           ),
+          const SizedBox(width: 8),
           const SizedBox(width: 8),
         ],
       ),

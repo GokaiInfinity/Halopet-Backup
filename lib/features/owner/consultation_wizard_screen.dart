@@ -682,7 +682,23 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> wit
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(q.question, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          RichText(
+            text: TextSpan(
+              text: q.question,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Color(0xFF0F2646),
+              ),
+              children: [
+                if (isWajib)
+                  const TextSpan(
+                    text: ' *',
+                    style: TextStyle(color: Colors.red),
+                  ),
+              ],
+            ),
+          ),
           const SizedBox(height: 12),
           if (q.type == QuestionType.text)
             TextFormField(
@@ -1145,7 +1161,7 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> wit
 
     // Prepare JSON data to pass to DoctorListScreen
     // Store JSON in 'main_complaints' to match existing SQLite schema without altering it
-    final complaintData = {
+    final Map<String, dynamic> complaintData = {
       'service_type': selectedService,
       'main_complaints': jsonEncode(formAnswers),
     };
@@ -1154,7 +1170,7 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> wit
       'pet_id': selectedPet!['id'],
       'complaint': formAnswers['keluhan_utama'] ?? selectedService,
       'complaint_data': complaintData,
-      'screening_data': {'result_category': category},
+      'screening_data': <String, dynamic>{'result_category': category},
     });
   }
 }
