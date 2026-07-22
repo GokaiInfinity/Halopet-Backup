@@ -19,6 +19,7 @@ class AppRoutes {
   static const petVaccinations = '/owner/pet-vaccinations';
   static const consultationWizard = '/owner/consultation-wizard';
   static const doctorList = '/owner/doctors';
+  static const emergencyVisit = '/owner/emergency_visit';
   static const doctorDetail = '/owner/doctor-detail';
   static const booking = '/owner/booking';
   static const payment = '/owner/payment';

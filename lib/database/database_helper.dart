@@ -349,6 +349,8 @@ class DatabaseHelper {
       (await database).insert('vaccinations', data);
   Future<int> deleteVaccination(int id) async =>
       (await database).delete('vaccinations', where: 'id = ?', whereArgs: [id]);
+  Future<int> clearVaccinations(int petId) async =>
+      (await database).delete('vaccinations', where: 'pet_id = ?', whereArgs: [petId]);
 
   Future<List<Map<String, Object?>>> getDiseases(int petId) async =>
       (await database).query('diseases',
@@ -357,6 +359,8 @@ class DatabaseHelper {
       (await database).insert('diseases', data);
   Future<int> deleteDisease(int id) async =>
       (await database).delete('diseases', where: 'id = ?', whereArgs: [id]);
+  Future<int> clearDiseases(int petId) async =>
+      (await database).delete('diseases', where: 'pet_id = ?', whereArgs: [petId]);
 
   Future<List<Map<String, Object?>>> getDoctors() async {
     return (await database).rawQuery(

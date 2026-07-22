@@ -8,6 +8,7 @@ import '../features/owner/pet_detail_tabs_screen.dart';
 import '../features/owner/pet_diseases_screen.dart';
 import '../features/owner/pet_vaccinations_screen.dart';
 import '../features/owner/pet_add_wizard_screen.dart';
+import '../features/owner/screens/emergency_clinic_screen.dart';
 import '../features/owner/consultation_wizard_screen.dart';
 import '../features/owner/monitoring_log_screen.dart';
 import '../features/owner/telemedicine_result_screens.dart';
@@ -85,6 +86,8 @@ class HaloPetApp extends StatelessWidget {
                 DoctorDetailScreen(doctor: args as Map<String, Object?>));
           case AppRoutes.booking:
             return _page(BookingScreen(doctor: args as Map<String, Object?>));
+          case AppRoutes.emergencyVisit:
+            return _page(EmergencyClinicScreen(args: args as Map<String, dynamic>));
           case AppRoutes.payment:
             return _page(PaymentScreen(args: args as Map<String, dynamic>));
           case AppRoutes.consultationPrep:

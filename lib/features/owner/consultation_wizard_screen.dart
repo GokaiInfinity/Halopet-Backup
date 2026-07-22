@@ -55,6 +55,167 @@ final Map<String, Map<String, List<ConsultationQuestion>>> serviceConfig = {
       ConsultationQuestion(key: 'tidak_buang_air_kecil', question: 'Apakah hewan tidak buang air kecil lebih dari 24 jam?', type: QuestionType.yesNo),
     ]
   },
+  'Kulit dan Bulu': {
+    'Wajib': [
+      ConsultationQuestion(key: 'keluhan_kulit', question: 'Keluhan kulit/bulu apa yang dialami?', type: QuestionType.text),
+      ConsultationQuestion(key: 'sejak_kapan', question: 'Sejak kapan keluhan muncul?', type: QuestionType.radio, options: ['Kurang dari 24 jam', '1 - 3 hari', 'Lebih dari 3 hari']),
+      ConsultationQuestion(key: 'bagian_tubuh', question: 'Bagian tubuh mana yang bermasalah?', type: QuestionType.text),
+      ConsultationQuestion(key: 'sering_menggaruk', question: 'Apakah hewan sering menggaruk?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'sering_menjilat', question: 'Apakah hewan sering menjilat bagian tertentu?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'bulu_rontok', question: 'Apakah ada bulu rontok?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'luka_koreng_kemerahan', question: 'Apakah ada luka, koreng, kemerahan, atau benjolan?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'bau_tidak_sedap', question: 'Apakah ada bau tidak sedap dari kulit?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'ketombe_mengelupas', question: 'Apakah ada ketombe atau kulit mengelupas?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'kutu_parasit', question: 'Apakah ada kutu, tungau, atau parasit yang terlihat?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'menyebar', question: 'Apakah keluhan menyebar ke bagian tubuh lain?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'tampak_kesakitan', question: 'Apakah hewan tampak kesakitan saat area tersebut disentuh?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'nafsu_makan_normal', question: 'Apakah nafsu makan tetap normal?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'pernah_masalah_sebelumnya', question: 'Apakah hewan pernah mengalami masalah kulit sebelumnya?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'pernah_diberi_salep', question: 'Apakah sudah pernah diberi salep, obat, atau sampo khusus?', type: QuestionType.yesNo),
+    ],
+    'Tambahan': [
+      ConsultationQuestion(key: 'terakhir_dimandikan', question: 'Kapan terakhir hewan dimandikan?', type: QuestionType.text),
+      ConsultationQuestion(key: 'sampo_digunakan', question: 'Sampo apa yang digunakan?', type: QuestionType.text),
+      ConsultationQuestion(key: 'ganti_makanan', question: 'Apakah baru mengganti makanan?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'ganti_grooming', question: 'Apakah baru mengganti produk grooming?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'hewan_lain_gatal', question: 'Apakah ada hewan lain di rumah yang mengalami gatal?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'pemilik_gatal', question: 'Apakah pemilik atau anggota rumah juga mengalami gatal?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'bermain_di_luar', question: 'Apakah hewan sering bermain di luar rumah?', type: QuestionType.yesNo),
+    ],
+    'Darurat': []
+  },
+  'Pencernaan': {
+    'Wajib': [
+      ConsultationQuestion(key: 'keluhan_pencernaan', question: 'Keluhan utama pencernaan apa yang dialami?', type: QuestionType.text),
+      ConsultationQuestion(key: 'sejak_kapan', question: 'Sejak kapan keluhan muncul?', type: QuestionType.radio, options: ['Kurang dari 24 jam', '1 - 3 hari', 'Lebih dari 3 hari']),
+      ConsultationQuestion(key: 'muntah', question: 'Apakah hewan muntah?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'kali_muntah', question: 'Berapa kali muntah dalam 24 jam terakhir?', type: QuestionType.text),
+      ConsultationQuestion(key: 'warna_muntah', question: 'Warna muntah seperti apa?', type: QuestionType.text),
+      ConsultationQuestion(key: 'isi_muntah', question: 'Apakah muntah berisi makanan, cairan, busa, atau darah?', type: QuestionType.text),
+      ConsultationQuestion(key: 'diare', question: 'Apakah hewan mengalami diare?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'kali_diare', question: 'Berapa kali diare dalam 24 jam terakhir?', type: QuestionType.text),
+      ConsultationQuestion(key: 'bentuk_feses', question: 'Bagaimana bentuk fesesnya?', type: QuestionType.text),
+      ConsultationQuestion(key: 'darah_lendir_feses', question: 'Apakah ada darah atau lendir pada feses?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'masih_makan', question: 'Apakah hewan masih mau makan?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'masih_minum', question: 'Apakah hewan masih mau minum?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'tampak_lemas', question: 'Apakah hewan tampak lemas?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'perut_kembung_sakit', question: 'Apakah perut terlihat kembung atau sakit saat disentuh?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'buang_air_kecil_normal', question: 'Apakah hewan masih buang air kecil normal?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'makan_benda_asing', question: 'Apakah hewan sempat makan benda asing?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'baru_ganti_makanan', question: 'Apakah hewan baru mengganti makanan?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'obat_cacing', question: 'Apakah hewan sudah diberi obat cacing?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'terakhir_obat_cacing', question: 'Kapan terakhir obat cacing diberikan?', type: QuestionType.text),
+      ConsultationQuestion(key: 'pernah_terjadi_sebelumnya', question: 'Apakah keluhan pernah terjadi sebelumnya?', type: QuestionType.yesNo),
+    ],
+    'Tambahan': [
+      ConsultationQuestion(key: 'makanan_24_jam', question: 'Makanan apa yang dimakan dalam 24 jam terakhir?', type: QuestionType.text),
+      ConsultationQuestion(key: 'makan_makanan_manusia', question: 'Apakah hewan makan makanan manusia?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'makan_benda_asing_lain', question: 'Apakah hewan makan tulang, plastik, kain, tanaman, atau benda asing?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'kemungkinan_keracunan', question: 'Apakah ada kemungkinan keracunan?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'hewan_lain_sama', question: 'Apakah ada hewan lain di rumah yang mengalami keluhan sama?', type: QuestionType.yesNo),
+    ],
+    'Darurat': [
+      ConsultationQuestion(key: 'muntah_terus_menerus', question: 'Apakah muntah terus-menerus?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'diare_berdarah', question: 'Apakah diare berdarah?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'tidak_makan_24_jam', question: 'Apakah hewan tidak mau makan sama sekali lebih dari 24 jam?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'sangat_lemas', question: 'Apakah hewan sangat lemas?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'perut_membesar_kembung', question: 'Apakah perut membesar/kembung?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'kesakitan_hebat', question: 'Apakah hewan tampak kesakitan hebat?', type: QuestionType.yesNo),
+    ]
+  },
+  'Nutrisi': {
+    'Wajib': [
+      ConsultationQuestion(key: 'jenis_hewan', question: 'Jenis hewan apa?', type: QuestionType.text),
+      ConsultationQuestion(key: 'usia_hewan', question: 'Usia hewan berapa?', type: QuestionType.text),
+      ConsultationQuestion(key: 'berat_badan', question: 'Berat badan hewan saat ini?', type: QuestionType.text),
+      ConsultationQuestion(key: 'tren_berat_badan', question: 'Apakah berat badan naik, turun, atau stabil?', type: QuestionType.radio, options: ['Naik', 'Turun', 'Stabil']),
+      ConsultationQuestion(key: 'makanan_utama', question: 'Makanan utama yang diberikan saat ini apa?', type: QuestionType.text),
+      ConsultationQuestion(key: 'merek_makanan', question: 'Merek makanan yang digunakan?', type: QuestionType.text),
+      ConsultationQuestion(key: 'frekuensi_makan', question: 'Berapa kali makan dalam sehari?', type: QuestionType.text),
+      ConsultationQuestion(key: 'porsi_makan', question: 'Berapa porsi makan setiap kali makan?', type: QuestionType.text),
+      ConsultationQuestion(key: 'diberi_snack', question: 'Apakah hewan diberi snack/treat?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'makanan_manusia', question: 'Apakah hewan sering diberi makanan manusia?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'alergi_makanan', question: 'Apakah ada alergi makanan?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'muntah_diare_setelah_makan', question: 'Apakah ada muntah atau diare setelah makan?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'bulu_kusam_rontok', question: 'Apakah bulu tampak kusam atau rontok?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'kondisi_tubuh', question: 'Apakah hewan terlalu kurus atau terlalu gemuk?', type: QuestionType.radio, options: ['Terlalu kurus', 'Terlalu gemuk', 'Normal']),
+      ConsultationQuestion(key: 'penyakit_tertentu', question: 'Apakah hewan memiliki penyakit tertentu?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'hamil_menyusui', question: 'Apakah hewan sedang hamil atau menyusui?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'aktif_bergerak', question: 'Apakah hewan aktif bergerak?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'tujuan_konsultasi', question: 'Apa tujuan konsultasi nutrisi? (Contoh: menaikkan berat badan, dll)', type: QuestionType.text),
+    ],
+    'Tambahan': [
+      ConsultationQuestion(key: 'pilih_pilih_makanan', question: 'Apakah hewan pilih-pilih makanan?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'sering_meminta_makan', question: 'Apakah hewan sering meminta makan?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'pernah_diet_khusus', question: 'Apakah pernah mencoba makanan diet khusus?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'rekomendasi_dokter_sebelumnya', question: 'Apakah ada rekomendasi makanan dari dokter sebelumnya?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'preferensi_makanan', question: 'Apakah pemilik ingin makanan kering, basah, homemade, atau kombinasi?', type: QuestionType.text),
+      ConsultationQuestion(key: 'batasan_budget', question: 'Apakah ada batasan budget makanan?', type: QuestionType.yesNo),
+    ],
+    'Darurat': []
+  },
+  'Perilaku': {
+    'Wajib': [
+      ConsultationQuestion(key: 'keluhan_perilaku', question: 'Perilaku apa yang menjadi keluhan utama?', type: QuestionType.text),
+      ConsultationQuestion(key: 'sejak_kapan', question: 'Sejak kapan perilaku tersebut muncul?', type: QuestionType.text),
+      ConsultationQuestion(key: 'tiba_tiba_atau_lama', question: 'Apakah perilaku muncul tiba-tiba atau sudah lama?', type: QuestionType.radio, options: ['Tiba-tiba', 'Sudah lama']),
+      ConsultationQuestion(key: 'perubahan_lingkungan', question: 'Apakah ada perubahan lingkungan?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'pindah_rumah', question: 'Apakah baru pindah rumah?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'anggota_keluarga_baru', question: 'Apakah ada anggota keluarga baru?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'hewan_baru', question: 'Apakah ada hewan baru di rumah?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'pernah_trauma', question: 'Apakah hewan pernah mengalami trauma?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'jatuh_terluka', question: 'Apakah hewan pernah jatuh, tertabrak, atau terluka?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'tampak_kesakitan', question: 'Apakah hewan tampak kesakitan?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'menjadi_agresif', question: 'Apakah hewan menjadi agresif?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'pernah_menggigit', question: 'Apakah hewan pernah menggigit atau mencakar?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'target_agresif', question: 'Apakah agresif terjadi kepada manusia atau hewan lain?', type: QuestionType.radio, options: ['Manusia', 'Hewan lain', 'Keduanya']),
+      ConsultationQuestion(key: 'sering_bersembunyi', question: 'Apakah hewan sering bersembunyi?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'vokal_berlebihan', question: 'Apakah hewan sering mengeong/menggonggong berlebihan?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'buang_air_sembarangan', question: 'Apakah hewan buang air sembarangan?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'pola_makan_berubah', question: 'Apakah pola makan berubah?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'pola_tidur_berubah', question: 'Apakah pola tidur berubah?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'sudah_disteril', question: 'Apakah hewan sudah disteril?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'rutin_bermain', question: 'Apakah hewan rutin diajak bermain atau beraktivitas?', type: QuestionType.yesNo),
+    ],
+    'Tambahan': [
+      ConsultationQuestion(key: 'pemicu_perilaku', question: 'Situasi apa yang memicu perilaku tersebut?', type: QuestionType.text),
+      ConsultationQuestion(key: 'saat_ditinggal', question: 'Apakah perilaku muncul saat ditinggal sendiri?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'bertemu_orang_asing', question: 'Apakah perilaku muncul saat bertemu orang asing?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'takut_suara', question: 'Apakah hewan takut suara tertentu? (Sebutkan jika ada)', type: QuestionType.text),
+      ConsultationQuestion(key: 'punya_mainan_area', question: 'Apakah hewan memiliki mainan atau area khusus?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'pelatihan_tertentu', question: 'Apakah pemilik pernah mencoba pelatihan tertentu?', type: QuestionType.yesNo),
+    ],
+    'Darurat': []
+  },
+  'Vaksinasi': {
+    'Wajib': [
+      ConsultationQuestion(key: 'jenis_hewan', question: 'Jenis hewan apa?', type: QuestionType.text),
+      ConsultationQuestion(key: 'usia_hewan', question: 'Usia hewan berapa?', type: QuestionType.text),
+      ConsultationQuestion(key: 'berat_badan', question: 'Berat badan hewan berapa?', type: QuestionType.text),
+      ConsultationQuestion(key: 'kondisi_sehat', question: 'Apakah hewan dalam kondisi sehat?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'gejala_sakit', question: 'Apakah ada demam, muntah, diare, batuk, atau lemas?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'pernah_divaksin', question: 'Apakah hewan sudah pernah divaksin?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'jenis_vaksin_sebelumnya', question: 'Vaksin apa saja yang sudah pernah diberikan?', type: QuestionType.text),
+      ConsultationQuestion(key: 'tanggal_vaksin_terakhir', question: 'Kapan tanggal vaksin terakhir?', type: QuestionType.text),
+      ConsultationQuestion(key: 'punya_buku_vaksin', question: 'Apakah memiliki buku vaksin?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'sudah_obat_cacing', question: 'Apakah hewan sudah diberi obat cacing?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'tanggal_obat_cacing', question: 'Kapan terakhir obat cacing diberikan?', type: QuestionType.text),
+      ConsultationQuestion(key: 'reaksi_setelah_vaksin', question: 'Apakah hewan pernah mengalami reaksi setelah vaksin?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'hamil_menyusui', question: 'Apakah hewan sedang hamil atau menyusui?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'sering_keluar_rumah', question: 'Apakah hewan sering keluar rumah?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'tinggal_banyak_hewan', question: 'Apakah hewan tinggal bersama banyak hewan lain?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'ada_rencana_grooming', question: 'Apakah hewan akan grooming, boarding, atau bepergian?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'kontak_hewan_sakit', question: 'Apakah hewan pernah kontak dengan hewan sakit?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'jadwal_lanjutan', question: 'Apakah pemilik ingin membuat jadwal vaksin lanjutan?', type: QuestionType.yesNo),
+    ],
+    'Tambahan': [
+      ConsultationQuestion(key: 'asal_hewan', question: 'Apakah hewan berasal dari shelter, pet shop, atau adopsi?', type: QuestionType.text),
+      ConsultationQuestion(key: 'riwayat_vaksin_jelas', question: 'Apakah riwayat vaksin sebelumnya jelas?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'rencana_perjalanan', question: 'Apakah ada rencana perjalanan luar kota?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'syarat_vaksin_penitipan', question: 'Apakah ada syarat vaksin dari tempat penitipan/grooming?', type: QuestionType.yesNo),
+    ],
+    'Darurat': []
+  },
 };
 
 class ConsultationWizardScreen extends StatefulWidget {
@@ -752,6 +913,28 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> wit
   }
 
   Widget _buildUploadFotoSection() {
+    List<String> suggestions = [];
+    if (selectedService == 'Kulit dan Bulu') {
+      suggestions = [
+        'Foto jarak dekat area kulit bermasalah.',
+        'Foto seluruh tubuh hewan.',
+        'Foto bagian yang rontok/luka.',
+        'Foto kutu/parasit jika terlihat.'
+      ];
+    } else if (selectedService == 'Pencernaan') {
+      suggestions = [
+        'Foto feses/muntahan.'
+      ];
+    } else if (selectedService == 'Perilaku') {
+      suggestions = [
+        'Video perilaku hewan saat kejadian tersebut muncul.'
+      ];
+    } else if (selectedService == 'Vaksinasi') {
+      suggestions = [
+        'Foto buku vaksin atau sertifikat kesehatan (jika ada).'
+      ];
+    }
+
     return Column(
       children: [
         const Text('Unggah Foto / Video (Opsional)',
@@ -761,6 +944,34 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> wit
             'Foto atau video membantu dokter\nmemahami kondisi hewan lebih baik.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Color(0xFF7A93AA))),
+        if (suggestions.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEBF6FE),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFF45A5C7).withOpacity(0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Data Foto yang Disarankan:', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF45A5C7), fontSize: 14)),
+                const SizedBox(height: 8),
+                ...suggestions.map((s) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('• ', style: TextStyle(color: Color(0xFF45A5C7))),
+                      Expanded(child: Text(s, style: const TextStyle(color: Color(0xFF0F2646), fontSize: 13))),
+                    ],
+                  ),
+                )),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 32),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1166,11 +1377,20 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> wit
       'main_complaints': jsonEncode(formAnswers),
     };
 
-    Navigator.pushNamed(context, AppRoutes.doctorList, arguments: {
-      'pet_id': selectedPet!['id'],
-      'complaint': formAnswers['keluhan_utama'] ?? selectedService,
-      'complaint_data': complaintData,
-      'screening_data': <String, dynamic>{'result_category': category},
-    });
+    if (category == 'Darurat') {
+      Navigator.pushNamed(context, AppRoutes.emergencyVisit, arguments: {
+        'pet_id': selectedPet!['id'],
+        'complaint': formAnswers['keluhan_utama'] ?? selectedService,
+        'complaint_data': complaintData,
+        'screening_data': <String, dynamic>{'result_category': category},
+      });
+    } else {
+      Navigator.pushNamed(context, AppRoutes.doctorList, arguments: {
+        'pet_id': selectedPet!['id'],
+        'complaint': formAnswers['keluhan_utama'] ?? selectedService,
+        'complaint_data': complaintData,
+        'screening_data': <String, dynamic>{'result_category': category},
+      });
+    }
   }
 }

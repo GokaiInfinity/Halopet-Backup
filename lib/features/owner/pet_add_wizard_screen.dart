@@ -130,9 +130,9 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
 
   // Step 3: Riwayat
   final _riwayatForm = GlobalKey<FormState>();
-  String riwayatVaksin = '';
-  String alergi = '';
-  String riwayatPenyakit = '';
+  List<Map<String, String>> riwayatVaksin = [];
+  List<String> alergi = [];
+  List<Map<String, String>> riwayatPenyakit = [];
 
   bool saving = false;
 
@@ -164,24 +164,24 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
         'tanggal_lahir': birthDate,
         'warna_ciri': colorMarks,
         'status_steril': sterilized,
-        'alergi': alergi,
+        'alergi': alergi.join(', '),
         'additional_photos': jsonEncode(additionalPhotos),
       });
 
       if (savedId != null) {
-        if (riwayatVaksin.isNotEmpty) {
+        for (final v in riwayatVaksin) {
           await context.read<PetProvider>().saveVaccination({
             'pet_id': savedId,
-            'name': riwayatVaksin,
-            'date': DateTime.now().toIso8601String().split('T')[0],
+            'name': v['name'],
+            'date': v['date'],
             'status': 'Aktif'
           });
         }
-        if (riwayatPenyakit.isNotEmpty) {
+        for (final p in riwayatPenyakit) {
           await context.read<PetProvider>().saveDisease({
             'pet_id': savedId,
-            'name': riwayatPenyakit,
-            'date': DateTime.now().toIso8601String().split('T')[0],
+            'name': p['name'],
+            'date': p['date'],
             'status': 'Sembuh'
           });
         }
@@ -198,6 +198,7 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
     });
     _pageController.nextPage(
         duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+
   }
 
   void _prev() {
@@ -820,56 +821,11 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
       child: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          const Text('Riwayat Vaksinasi',
-              style: TextStyle(
-                  fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
-          const SizedBox(height: 8),
-          TextFormField(
-            decoration: InputDecoration(
-              hintText: 'Contoh: Vaksin Rabies',
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE0E5EC))),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE0E5EC))),
-            ),
-            onSaved: (v) => riwayatVaksin = v ?? '',
-          ),
+          _buildListField<Map<String, String>>('Riwayat Vaksinasi', riwayatVaksin, () => _showAddMapDialog('Riwayat Vaksinasi', (val) => setState(() => riwayatVaksin.add(val))), (idx) => setState(() => riwayatVaksin.removeAt(idx)), (item) => '${item['name']} (${item['date']})'),
           const SizedBox(height: 16),
-          const Text('Alergi',
-              style: TextStyle(
-                  fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
-          const SizedBox(height: 8),
-          TextFormField(
-            decoration: InputDecoration(
-              hintText: 'Contoh: Alergi ayam (opsional)',
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE0E5EC))),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE0E5EC))),
-            ),
-            onSaved: (v) => alergi = v ?? '',
-          ),
+          _buildListField<String>('Alergi', alergi, () => _showAddItemDialog('Alergi', (val) => setState(() => alergi.add(val))), (idx) => setState(() => alergi.removeAt(idx)), (item) => item),
           const SizedBox(height: 16),
-          const Text('Riwayat Penyakit',
-              style: TextStyle(
-                  fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
-          const SizedBox(height: 8),
-          TextFormField(
-            decoration: InputDecoration(
-              hintText: 'Contoh: Cacingan (opsional)',
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE0E5EC))),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE0E5EC))),
-            ),
-            onSaved: (v) => riwayatPenyakit = v ?? '',
-          ),
+          _buildListField<Map<String, String>>('Riwayat Penyakit', riwayatPenyakit, () => _showAddMapDialog('Riwayat Penyakit', (val) => setState(() => riwayatPenyakit.add(val))), (idx) => setState(() => riwayatPenyakit.removeAt(idx)), (item) => '${item['name']} (${item['date']})'),
           const SizedBox(height: 32),
           Container(
             padding: const EdgeInsets.all(16),
@@ -999,6 +955,189 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
         Text(label, style: const TextStyle(color: Color(0xFF0F2646), fontWeight: FontWeight.bold, fontSize: 14)),
         Text(value, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F2646), fontSize: 14)),
       ],
+    );
+  }
+
+  Widget _buildListField<T>(String title, List<T> items, VoidCallback onAddPressed, Function(int) onRemove, String Function(T) labelBuilder) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE0E5EC)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: items.isEmpty
+                    ? const Text('Belum diisi', style: TextStyle(color: Color(0xFF7A93AA)))
+                    : Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: items.asMap().entries.map((entry) => Chip(
+                          label: Text(labelBuilder(entry.value)),
+                          onDeleted: () => onRemove(entry.key),
+                          backgroundColor: const Color(0xFFE6F4F8),
+                          deleteIconColor: const Color(0xFF45A5C7),
+                          labelStyle: const TextStyle(color: Color(0xFF0F2646), fontSize: 12),
+                        )).toList(),
+                      ),
+              ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: onAddPressed,
+                icon: const Icon(Icons.add, color: Color(0xFF45A5C7), size: 16),
+                label: const Text('Tambah', style: TextStyle(color: Color(0xFF45A5C7))),
+              )
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showAddItemDialog(String title, Function(String) onAdd) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Tambah $title', textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
+              const SizedBox(height: 24),
+              TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  hintText: 'Masukkan nama $title',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF45A5C7))),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0E5EC))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF45A5C7))),
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Batal', style: TextStyle(color: Color(0xFF7A93AA), fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () {
+                  if (controller.text.isNotEmpty) {
+                    onAdd(controller.text);
+                    Navigator.pop(ctx);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: const Color(0xFF45A5C7),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Simpan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAddMapDialog(String title, Function(Map<String, String>) onAdd) {
+    final nameController = TextEditingController();
+    final dateController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Tambah $title', textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
+              const SizedBox(height: 24),
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  hintText: 'Masukkan nama $title',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF45A5C7))),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0E5EC))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF45A5C7))),
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: dateController,
+                readOnly: true,
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime.now(),
+                  );
+                  if (date != null) {
+                    final d = date.day.toString().padLeft(2, '0');
+                    final m = date.month.toString().padLeft(2, '0');
+                    final y = date.year;
+                    dateController.text = '$d-$m-$y';
+                  }
+                },
+                decoration: InputDecoration(
+                  hintText: 'Tanggal (dd-mm-yyyy)',
+                  suffixIcon: const Icon(Icons.calendar_today, color: Color(0xFF45A5C7)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF45A5C7))),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0E5EC))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF45A5C7))),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Batal', style: TextStyle(color: Color(0xFF7A93AA), fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () {
+                  if (nameController.text.isNotEmpty && dateController.text.isNotEmpty) {
+                    onAdd({
+                      'name': nameController.text,
+                      'date': dateController.text,
+                    });
+                    Navigator.pop(ctx);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: const Color(0xFF45A5C7),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Simpan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -3,11 +3,49 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../app/routes.dart';
 
-class PetDetailTabsScreen extends StatelessWidget {
+import 'package:provider/provider.dart';
+import '../../../providers/pet_provider.dart';
+
+class PetDetailTabsScreen extends StatefulWidget {
   const PetDetailTabsScreen(
       {super.key, required this.pet, this.initialTabIndex = 0});
   final Map<String, Object?> pet;
   final int initialTabIndex;
+
+  @override
+  State<PetDetailTabsScreen> createState() => _PetDetailTabsScreenState();
+}
+
+class _PetDetailTabsScreenState extends State<PetDetailTabsScreen> {
+  late Map<String, Object?> pet;
+
+  @override
+  void initState() {
+    super.initState();
+    pet = widget.pet;
+    // Load vaccinations and diseases when screen opens
+    Future.microtask(() {
+      context.read<PetProvider>().loadDetails(pet['id'] as int);
+    });
+  }
+
+  Future<void> _editPet() async {
+    await Navigator.pushNamed(context, AppRoutes.petEdit, arguments: pet);
+    if (!mounted) return;
+    
+    final petProvider = context.read<PetProvider>();
+    await petProvider.load(pet['owner_id'] as int); // reload pets list
+    await petProvider.loadDetails(pet['id'] as int); // reload vaccinations/diseases
+    
+    try {
+      final updatedPet = petProvider.pets.firstWhere((p) => p['id'] == pet['id']);
+      setState(() {
+        pet = updatedPet;
+      });
+    } catch (e) {
+      // Pet might have been deleted, ignore or handle
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +53,7 @@ class PetDetailTabsScreen extends StatelessWidget {
 
     return DefaultTabController(
       length: 3,
-      initialIndex: initialTabIndex,
+      initialIndex: widget.initialTabIndex,
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
@@ -27,9 +65,7 @@ class PetDetailTabsScreen extends StatelessWidget {
           iconTheme: const IconThemeData(color: Color(0xFF0F2646)),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pushNamed(context, AppRoutes.petEdit, arguments: pet);
-              },
+              onPressed: _editPet,
               child: const Text(
                 'Edit',
                 style: TextStyle(
@@ -228,14 +264,25 @@ class PetDetailTabsScreen extends StatelessWidget {
   }
 
   Widget _buildRiwayatTab(BuildContext context) {
+    final petProvider = context.watch<PetProvider>();
+    final vaksins = petProvider.vaccinations;
+    final penyakits = petProvider.diseases;
+
+    String vaksinStr = vaksins.isEmpty 
+        ? '-' 
+        : vaksins.map((e) => '${e['name']} (${e['date']})').join('\n');
+    String penyakitStr = penyakits.isEmpty 
+        ? 'Tidak ada' 
+        : penyakits.map((e) => '${e['name']} (${e['date']})').join('\n');
+
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        _buildSummaryRow('Riwayat Vaksinasi', pet['riwayat_vaksin'] != null && pet['riwayat_vaksin'].toString().isNotEmpty ? '${pet['riwayat_vaksin']}' : '-'),
+        _buildSummaryRow('Riwayat Vaksinasi', vaksinStr),
         const Divider(height: 32, color: Color(0xFFF2F4F7)),
         _buildSummaryRow('Alergi', pet['alergi'] != null && pet['alergi'].toString().isNotEmpty ? '${pet['alergi']}' : 'Tidak ada'),
         const Divider(height: 32, color: Color(0xFFF2F4F7)),
-        _buildSummaryRow('Riwayat Penyakit', pet['riwayat_penyakit'] != null && pet['riwayat_penyakit'].toString().isNotEmpty ? '${pet['riwayat_penyakit']}' : 'Tidak ada'),
+        _buildSummaryRow('Riwayat Penyakit', penyakitStr),
       ],
     );
   }
@@ -243,16 +290,21 @@ class PetDetailTabsScreen extends StatelessWidget {
   Widget _buildSummaryRow(String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
             style: const TextStyle(
                 color: Color(0xFF0F2646),
                 fontWeight: FontWeight.bold,
                 fontSize: 14)),
-        Text(value,
-            style: const TextStyle(
-                color: Color(0xFF7A93AA),
-                fontSize: 14)),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                  color: Color(0xFF7A93AA),
+                  fontSize: 14)),
+        ),
       ],
     );
   }

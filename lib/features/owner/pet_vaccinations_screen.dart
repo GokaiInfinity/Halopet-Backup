@@ -33,6 +33,14 @@ class _PetVaccinationsScreenState extends State<PetVaccinationsScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Color(0xFF0F2646)),
+        actions: [
+          TextButton(
+            onPressed: () => _showAddForm(context),
+            child: const Text('+ Tambah',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: Color(0xFF45A5C7))),
+          ),
+        ],
       ),
       body: p.loadingDetails
           ? const Center(child: CircularProgressIndicator())
@@ -46,25 +54,107 @@ class _PetVaccinationsScreenState extends State<PetVaccinationsScreen> {
                     return _buildVaccinationCard(vaccination);
                   },
                 ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFF0F0F0))),
-        ),
-        child: ElevatedButton(
-          onPressed: () {},
-          style: ElevatedButton.styleFrom(
-            minimumSize: const Size(double.infinity, 50),
-            backgroundColor: const Color(0xFF45A5C7),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          ),
-          child: const Text('Tambah Vaksin',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        ),
-      ),
     );
+  }
+
+  void _showAddForm(BuildContext context) {
+    final nameController = TextEditingController();
+    final dateController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            left: 20,
+            right: 20,
+            top: 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Tambah Riwayat Vaksinasi',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F2646))),
+              const SizedBox(height: 16),
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: 'Nama Vaksin (contoh: Vaksin Rabies)',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: dateController,
+                readOnly: true,
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime.now(),
+                  );
+                  if (date != null) {
+                    final formattedDate =
+                        '${date.day} ${_getMonth(date.month)} ${date.year}';
+                    dateController.text = formattedDate;
+                  }
+                },
+                decoration: InputDecoration(
+                  labelText: 'Tanggal Vaksinasi',
+                  suffixIcon: const Icon(Icons.calendar_today),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () async {
+                  if (nameController.text.isNotEmpty &&
+                      dateController.text.isNotEmpty) {
+                    final data = {
+                      'pet_id': widget.pet['id'],
+                      'name': nameController.text,
+                      'date': dateController.text,
+                      'status': 'Aktif',
+                    };
+                    await context.read<PetProvider>().saveVaccination(data);
+                    if (mounted) Navigator.pop(ctx);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                  backgroundColor: const Color(0xFF45A5C7),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Simpan',
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _getMonth(int month) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt',
+      'Nov', 'Des'
+    ];
+    return months[month - 1];
   }
 
   Widget _buildEmptyState() {
@@ -106,7 +196,7 @@ class _PetVaccinationsScreenState extends State<PetVaccinationsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${vaccination['vaccine_name']}',
+                '${vaccination['name']}',
                 style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,

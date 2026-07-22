@@ -77,6 +77,10 @@ class PetProvider extends ChangeNotifier {
     await loadDetails(petId);
   }
 
+  Future<void> clearVaccinations(int petId) async {
+    await DatabaseHelper.instance.clearVaccinations(petId);
+  }
+
   Future<bool> saveDisease(Map<String, Object?> data) async {
     try {
       await DatabaseHelper.instance.addDisease(data);
@@ -92,5 +96,9 @@ class PetProvider extends ChangeNotifier {
   Future<void> removeDisease(int id, int petId) async {
     await DatabaseHelper.instance.deleteDisease(id);
     await loadDetails(petId);
+  }
+
+  Future<void> clearDiseases(int petId) async {
+    await DatabaseHelper.instance.clearDiseases(petId);
   }
 }
