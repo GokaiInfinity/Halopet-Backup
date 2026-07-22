@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../app/routes.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/consultation_provider.dart';
+import '../../database/database_helper.dart';
 
 // ==== MOCKUP 31: RUANG KONSULTASI CHAT ====
 class ConsultationRoomScreen extends StatefulWidget {
@@ -19,47 +21,68 @@ class ConsultationRoomScreen extends StatefulWidget {
 class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
   final TextEditingController _msgController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  List<Map<String, dynamic>> _messages = [];
+  Timer? _timer;
 
-  final List<Map<String, dynamic>> _messages = [
-    {
-      'sender': 'doctor',
-      'text': 'Selamat pagi, ada yang bisa saya bantu untuk hewan Anda?',
-      'time': '09:30',
-      'type': 'text'
-    },
-    {
-      'sender': 'user',
-      'text':
-          'Pagi dok, dia sering garuk-garuk dan bulunya rontok di beberapa bagian.',
-      'time': '09:31',
-      'type': 'text'
-    },
-    {
-      'sender': 'doctor',
-      'text': 'Baik, boleh kirim foto bagian yang rontok?',
-      'time': '09:31',
-      'type': 'text'
-    },
-    {'sender': 'user', 'image': 'mock_image', 'time': '09:32', 'type': 'image'},
-  ];
+  int get consultationId => widget.args['consultation_id'] ?? 1;
 
-  void _sendMessage() {
-    if (_msgController.text.trim().isEmpty) return;
-    setState(() {
-      _messages.add({
-        'sender': 'user',
-        'text': _msgController.text.trim(),
-        'time': '09:35', // mocked time
-        'type': 'text'
+  @override
+  void initState() {
+    super.initState();
+    _loadMessages();
+    _timer = Timer.periodic(const Duration(seconds: 2), (_) => _loadMessages());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _msgController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadMessages() async {
+    final msgs = await DatabaseHelper.instance.getMessages(consultationId);
+    if (mounted) {
+      final wasAtBottom = _scrollController.hasClients &&
+          _scrollController.position.pixels >=
+              _scrollController.position.maxScrollExtent - 50;
+      
+      setState(() {
+        _messages = msgs;
       });
-      _msgController.clear();
-    });
+
+      if (wasAtBottom) {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      }
+    }
+  }
+
+  void _sendMessage() async {
+    if (_msgController.text.trim().isEmpty) return;
+    final text = _msgController.text.trim();
+    _msgController.clear();
+    
+    final userId = context.read<AuthProvider>().user?.id ?? 1;
+    await DatabaseHelper.instance.addMessage(consultationId, userId, text);
+    await _loadMessages();
+
     Future.delayed(const Duration(milliseconds: 100), () {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
     });
   }
 
@@ -69,27 +92,26 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
     if (pickedFile != null) {
       final bytes = await pickedFile.readAsBytes();
       final base64String = base64Encode(bytes);
-      setState(() {
-        _messages.add({
-          'sender': 'user',
-          'image': base64String,
-          'time': '09:35',
-          'type': 'image'
-        });
-      });
+      
+      final userId = context.read<AuthProvider>().user?.id ?? 1;
+      await DatabaseHelper.instance.addMessage(consultationId, userId, '[IMAGE]:$base64String');
+      await _loadMessages();
+
       Future.delayed(const Duration(milliseconds: 100), () {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final doctorName = widget.args['doctor_name'] ?? 'Drh. Anisa Putri';
+    final doctorName = widget.args['doctor_name'] ?? 'Dokter';
     final doctorSpec = widget.args['specialist'] ?? 'Kulit & Bulu';
 
     return Scaffold(
@@ -178,7 +200,8 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final msg = _messages[index];
-                final isMe = msg['sender'] == 'user';
+                final senderId = msg['sender_id'] as int;
+                final isMe = senderId == context.read<AuthProvider>().user?.id;
                 return _buildMessageBubble(msg, isMe);
               },
             ),
@@ -190,6 +213,14 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
   }
 
   Widget _buildMessageBubble(Map<String, dynamic> msg, bool isMe) {
+    final text = msg['message'] as String;
+    final isImage = text.startsWith('[IMAGE]:');
+    final content = isImage ? text.substring(8) : text;
+    
+    // Parse time
+    final createdAt = msg['created_at'] as String;
+    final time = "${DateTime.parse(createdAt).toLocal().hour.toString().padLeft(2, '0')}:${DateTime.parse(createdAt).toLocal().minute.toString().padLeft(2, '0')}";
+
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -214,37 +245,40 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (msg['type'] == 'text')
-              Text(msg['text'],
+            if (!isImage)
+              Text(content,
                   style: TextStyle(
                       color: isMe
                           ? const Color(0xFF0F2646)
                           : const Color(0xFF0F2646))),
-            if (msg['type'] == 'image')
+            if (isImage)
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: msg['image'] == 'mock_image'
+                child: content == 'mock_image'
                     ? Container(
                         height: 120,
                         width: 120,
-                        color: Colors.grey[300],
+                        color: const Color(0xFFE0E0E0),
                         child: const Icon(Icons.pets,
-                            color: Colors.grey, size: 40),
+                            size: 40, color: Colors.grey),
                       )
-                    : Image.memory(base64Decode(msg['image']),
-                        width: 200, fit: BoxFit.cover),
+                    : Image.memory(
+                        base64Decode(content),
+                        height: 150,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
               ),
             const SizedBox(height: 4),
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(msg['time'],
-                    style: const TextStyle(
-                        fontSize: 10, color: Color(0xFF7A93AA))),
+                Text(time,
+                    style:
+                        const TextStyle(fontSize: 10, color: Color(0xFF7A93AA))),
                 if (isMe) ...[
                   const SizedBox(width: 4),
-                  const Icon(Icons.done_all,
-                      size: 14, color: Color(0xFF2196F3)),
+                  const Icon(Icons.done_all, color: Colors.blue, size: 12),
                 ]
               ],
             )
@@ -424,7 +458,7 @@ class ConsultationFinishedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final doctorName = args['doctor_name'] ?? 'Drh. Anisa Putri';
+    final doctorName = args['doctor_name'] ?? 'Dokter';
     final petName = args['pet_name'] ?? 'Hewan Anda';
 
     return Scaffold(

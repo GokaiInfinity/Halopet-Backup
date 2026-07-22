@@ -213,7 +213,11 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                           'Jadwal',
                           () => Navigator.pushNamed(
                               context, AppRoutes.doctorSchedule)),
-                      _buildQuickMenu(Icons.receipt_long, 'Resep', () {}),
+                      _buildQuickMenu(
+                          Icons.chat_bubble_outline,
+                          'Konsultasi',
+                          () => Navigator.pushNamed(
+                              context, AppRoutes.doctorConsultations)),
                       _buildQuickMenu(
                           Icons.medical_information, 'Catatan\nMedis', () {}),
                     ],
@@ -245,61 +249,73 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
       String type, String status, MaterialColor color) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFF0F4F8)),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 50,
-            child: Text(time,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, color: Color(0xFF0F2646))),
-          ),
-          CircleAvatar(
-            backgroundColor: const Color(0xFFF0F4F8),
-            radius: 20,
-            child: Icon(Icons.pets, color: color[300], size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          hoverColor: Colors.blue.withOpacity(0.05),
+          onTap: () => Navigator.pushNamed(
+              context, AppRoutes.doctorAppointmentDetail,
+              arguments: '$time, 20 Mei 2025'),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(petName,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                        color: Color(0xFF0F2646))),
-                Text(breed,
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF7A93AA))),
-                const SizedBox(height: 4),
-                Text(type,
-                    style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF0F2646))),
+                SizedBox(
+                  width: 50,
+                  child: Text(time,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w600, color: Color(0xFF0F2646))),
+                ),
+                CircleAvatar(
+                  backgroundColor: const Color(0xFFF0F4F8),
+                  radius: 20,
+                  child: Icon(Icons.pets, color: color[300], size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(petName,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                              color: Color(0xFF0F2646))),
+                      Text(breed,
+                          style: const TextStyle(
+                              fontSize: 12, color: Color(0xFF7A93AA))),
+                      const SizedBox(height: 4),
+                      Text(type,
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF0F2646))),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: color.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(status,
+                      style: TextStyle(
+                          color: color.shade700,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold)),
+                ),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: color.shade50,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(status,
-                style: TextStyle(
-                    color: color.shade700,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold)),
-          ),
-        ],
+        ),
       ),
     );
   }

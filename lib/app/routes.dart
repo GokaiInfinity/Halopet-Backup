@@ -46,6 +46,7 @@ class AppRoutes {
   static const doctorHome = '/doctor';
   static const doctorNotifications = '/doctor/notifications';
   static const doctorSchedule = '/doctor/schedule';
+  static const doctorConsultations = '/doctor/consultations';
   static const doctorAppointmentDetail = '/doctor/appointment-detail';
   static const doctorPatients = '/doctor/patients';
   static const doctorPatientDetail = '/doctor/patient-detail';
@@ -71,6 +72,7 @@ class AppRoutes {
   static const adminAddMedicine = '/admin/add-medicine';
   static const adminTransactions = '/admin/transactions';
   static const adminReports = '/admin/reports';
+  static const adminConsultations = '/admin/consultations';
   static const adminTickets = '/admin/tickets';
   static const adminSettings = '/admin/settings';
   static const adminUsers = '/admin/users';

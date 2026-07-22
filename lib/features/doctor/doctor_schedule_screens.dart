@@ -545,7 +545,13 @@ class DoctorAppointmentDetailScreen extends StatelessWidget {
 
           // ACTIONS
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text(
+                      'Diarahkan ke daftar konsultasi aktif (jadwal ini adalah data contoh)')));
+              Navigator.pushReplacementNamed(
+                  context, AppRoutes.doctorConsultations);
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2196F3),
               minimumSize: const Size(double.infinity, 50),

@@ -23,65 +23,122 @@ class OwnerProfileScreen extends StatelessWidget {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     return OwnerScaffold(
-        title: 'Profil',
-        index: 4,
-        body: ListView(padding: const EdgeInsets.all(20), children: [
-          Center(
-            child: user.photo.isNotEmpty
-                ? CircleAvatar(
-                    radius: 50,
-                    backgroundImage: FileImage(File(user.photo)),
-                  )
-                : AvatarInitials(user.name, radius: 50),
-          ),
-          const SizedBox(height: 14),
-          Center(
-              child: Text(user.name,
-                  style: const TextStyle(
-                      fontSize: 24, fontWeight: FontWeight.w900))),
-          Center(
-              child: Text(user.email,
-                  style: const TextStyle(color: AppColors.muted))),
-          const SizedBox(height: 16),
-          Center(
-            child: OutlinedButton.icon(
-              onPressed: () =>
-                  Navigator.pushNamed(context, AppRoutes.editProfile),
-              icon: const Icon(Icons.edit, size: 16),
-              label: const Text('Edit Profil'),
-            ),
-          ),
+      title: 'Pengaturan',
+      index: 4,
+      body: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          const Text('Akun',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: Color(0xFF7A93AA))),
+          const SizedBox(height: 8),
+          _buildSettingsItem(
+              Icons.person_outline, 'Profil Pemilik', 'Ubah informasi profil',
+              onTap: () =>
+                  Navigator.pushNamed(context, AppRoutes.editProfile)),
           const SizedBox(height: 24),
-          InfoCard(
-              child: Column(children: [
-            ListTile(
-                leading: const Icon(Icons.phone_outlined),
-                title: const Text('Nomor HP'),
-                subtitle: Text(user.phone)),
-            const Divider(),
-            const ListTile(
-                leading: Icon(Icons.security_outlined),
-                title: Text('Privasi dan keamanan'),
-                trailing: Icon(Icons.chevron_right)),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.help_outline),
-              title: const Text('Bantuan'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.pushNamed(context, AppRoutes.helpCenter),
-            )
-          ])),
-          const SizedBox(height: 18),
-          OutlinedButton.icon(
+          const Text('Keamanan',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: Color(0xFF7A93AA))),
+          const SizedBox(height: 8),
+          _buildSettingsItem(Icons.lock_outline, 'Ubah Kata Sandi',
+              'Perbarui kata sandi akun Anda'),
+          const SizedBox(height: 24),
+          const Text('Notifikasi',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: Color(0xFF7A93AA))),
+          const SizedBox(height: 8),
+          _buildSettingsItem(Icons.notifications_none, 'Pengaturan Notifikasi',
+              'Kelola preferensi notifikasi'),
+          const SizedBox(height: 24),
+          const Text('Lainnya',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: Color(0xFF7A93AA))),
+          const SizedBox(height: 8),
+          _buildSettingsItemTextTrailing('Bahasa', 'Indonesia >'),
+          const SizedBox(height: 16),
+          _buildSettingsItemOnlyText('Bantuan & Dukungan',
+              onTap: () =>
+                  Navigator.pushNamed(context, AppRoutes.helpCenter)),
+          const SizedBox(height: 16),
+          _buildSettingsItemOnlyText('Tentang HaloPet'),
+          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
               onPressed: () async {
                 await context.read<AuthProvider>().logout();
                 if (context.mounted) {
                   Navigator.pushNamedAndRemoveUntil(
-                      context, AppRoutes.login, (_) => false);
+                      context, AppRoutes.login, (route) => false);
                 }
               },
               icon: const Icon(Icons.logout),
-              label: const Text('Keluar'))
-        ]));
+              label: const Text('Keluar'),
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsItem(IconData icon, String title, String subtitle,
+      {VoidCallback? onTap}) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon, color: const Color(0xFF0F2646)),
+      title: Text(title,
+          style: const TextStyle(
+              fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
+      subtitle: Text(subtitle,
+          style: const TextStyle(fontSize: 12, color: Color(0xFF7A93AA))),
+      trailing: const Icon(Icons.chevron_right, color: Color(0xFF7A93AA)),
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildSettingsItemTextTrailing(String title, String trailingText) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title,
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
+          Text(trailingText, style: const TextStyle(color: Color(0xFF7A93AA))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsItemOnlyText(String title, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                if (title.contains('Bantuan'))
+                  const Icon(Icons.help_outline,
+                      color: Color(0xFF0F2646), size: 20),
+                if (title.contains('Tentang'))
+                  const Icon(Icons.info_outline,
+                      color: Color(0xFF0F2646), size: 20),
+                const SizedBox(width: 12),
+                Text(title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
+              ],
+            ),
+            const Icon(Icons.chevron_right, color: Color(0xFF7A93AA)),
+          ],
+        ),
+      ),
+    );
   }
 }

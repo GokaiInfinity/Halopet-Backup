@@ -185,7 +185,7 @@ class AdminScaffold extends StatelessWidget {
               final route = [
                 AppRoutes.adminHome,
                 AppRoutes.adminPatients,
-                AppRoutes.adminTransactions,
+                AppRoutes.adminConsultations,
                 AppRoutes.adminReports,
                 AppRoutes.adminSettings
               ][i];

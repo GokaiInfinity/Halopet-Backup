@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../app/routes.dart';
+import '../../providers/auth_provider.dart';
 
 // ==== MOCKUP 12: DAFTAR PASIEN ====
 class DoctorPatientListScreen extends StatelessWidget {
@@ -481,7 +483,7 @@ class DoctorMedicalHistoryScreen extends StatelessWidget {
             date: '10 Apr 2025 • 11:00 WIB',
             type: 'Vaksinasi',
             vaksin: 'Rabies',
-            dokter: 'Drh. Anisa Putri',
+            dokter: context.read<AuthProvider>().user?.name ?? 'Dokter',
             isLast: true,
           ),
         ],

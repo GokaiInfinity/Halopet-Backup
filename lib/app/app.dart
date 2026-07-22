@@ -17,6 +17,8 @@ import '../features/owner/telemedicine_flow_screens.dart';
 import '../features/owner/review_form_screen.dart';
 import '../features/owner/help_center_screen.dart';
 import '../features/profile/screens/edit_profile_screen.dart';
+import '../features/admin/admin_inventory_screens.dart';
+import '../features/admin/admin_consultations_screen.dart';
 import '../features/admin/admin_tickets_screen.dart';
 import '../core/widgets/common_widgets.dart';
 import 'routes.dart';
@@ -136,6 +138,8 @@ class HaloPetApp extends StatelessWidget {
             return _page(const DoctorNotificationScreen());
           case AppRoutes.doctorSchedule:
             return _page(const DoctorScheduleScreen());
+          case AppRoutes.doctorConsultations:
+            return _page(const DoctorConsultationsScreen());
           case AppRoutes.doctorAppointmentDetail:
             final dateString = args as String?;
             return _page(DoctorAppointmentDetailScreen(
@@ -186,6 +190,8 @@ class HaloPetApp extends StatelessWidget {
             return _page(const AdminTransactionScreen());
           case AppRoutes.adminReports:
             return _page(const AdminReportScreen());
+          case AppRoutes.adminConsultations:
+            return _page(const AdminConsultationsScreen());
           case AppRoutes.adminTickets:
             return _page(const AdminTicketsScreen());
           case AppRoutes.adminSettings:

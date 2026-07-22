@@ -103,8 +103,9 @@ class AdminDashboardScreen extends StatelessWidget {
                 mainAxisSpacing: 16,
                 crossAxisSpacing: 16,
                 children: [
-                  _buildQuickMenu(
-                      Icons.chat_bubble_outline, 'Konsultasi', () {}),
+                  _buildQuickMenu(Icons.chat_bubble_outline, 'Konsultasi', () {
+                    Navigator.pushNamed(context, AppRoutes.adminConsultations);
+                  }),
                   _buildQuickMenu(
                       Icons.pets,
                       'Pasien',

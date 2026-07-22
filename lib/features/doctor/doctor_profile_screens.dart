@@ -3,12 +3,16 @@ import 'package:provider/provider.dart';
 import '../../app/routes.dart';
 import '../../providers/auth_provider.dart';
 
-// ==== MOCKUP 17: PROFIL DOKTER ====
+import '../../database/database_helper.dart';
+
+// ==== PROFIL DOKTER ====
 class DoctorProfileScreen extends StatelessWidget {
   const DoctorProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+    
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -25,113 +29,132 @@ class DoctorProfileScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(24),
-                children: [
-                  // HEADER
-                  Center(
-                    child: Column(
-                      children: [
-                        const CircleAvatar(
-                            radius: 40,
-                            backgroundColor: Color(0xFFE6F0F9),
-                            child: Icon(Icons.person,
-                                color: Colors.blue, size: 40)),
-                        const SizedBox(height: 16),
-                        const Text('Drh. Anisa Putri',
-                            style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFF0F2646))),
-                        const SizedBox(height: 4),
-                        const Text('Dokter Hewan',
-                            style: TextStyle(color: Color(0xFF7A93AA))),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 6),
-                          decoration: BoxDecoration(
-                              color: Colors.green.shade50,
-                              borderRadius: BorderRadius.circular(20)),
-                          child: const Text('Aktif',
-                              style: TextStyle(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 32),
+        child: user == null
+            ? const Center(child: CircularProgressIndicator())
+            : FutureBuilder<Map<String, Object?>?>(
+                future: DatabaseHelper.instance.getDoctorByUser(user.id),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  
+                  final doctor = snapshot.data;
+                  final doctorName = user.name;
+                  final doctorEmail = user.email;
+                  final doctorPhone = user.phone;
+                  final doctorSip = doctor?['license'] as String? ?? '-';
+                  final doctorExperience = doctor?['experience'] as int? ?? 0;
+                  final doctorSpecialist = doctor?['specialist'] as String? ?? 'Umum';
 
-                  // INFORMASI
-                  const Text('Informasi',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                          color: Color(0xFF0F2646))),
-                  const SizedBox(height: 16),
-                  _buildInfoRow(
-                      Icons.badge_outlined, 'SIP Vet', '1234/VET/2023'),
-                  const SizedBox(height: 16),
-                  _buildInfoRow(
-                      Icons.email_outlined, 'Email', 'anisa.putri@halopet.id'),
-                  const SizedBox(height: 16),
-                  _buildInfoRow(
-                      Icons.phone_outlined, 'No. Telepon', '08xxxxxxxxx'),
-                  const SizedBox(height: 16),
-                  _buildInfoRow(
-                      Icons.work_outline, 'Pengalaman', '5 Tahun pengalaman'),
-                  const SizedBox(height: 32),
-
-                  // SPESIALISASI
-                  const Text('Spesialisasi',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                          color: Color(0xFF0F2646))),
-                  const SizedBox(height: 16),
-                  Wrap(
+                  return Column(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                            color: const Color(0xFFE3F2FD),
-                            borderRadius: BorderRadius.circular(16)),
-                        child: const Text('Hewan Kecil',
-                            style: TextStyle(
-                                color: Color(0xFF2196F3),
-                                fontWeight: FontWeight.bold)),
+                      Expanded(
+                        child: ListView(
+                          padding: const EdgeInsets.all(24),
+                          children: [
+                            // HEADER
+                            Center(
+                              child: Column(
+                                children: [
+                                  const CircleAvatar(
+                                      radius: 40,
+                                      backgroundColor: Color(0xFFE6F0F9),
+                                      child: Icon(Icons.person,
+                                          color: Colors.blue, size: 40)),
+                                  const SizedBox(height: 16),
+                                  Text(doctorName,
+                                      style: const TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w900,
+                                          color: Color(0xFF0F2646))),
+                                  const SizedBox(height: 4),
+                                  const Text('Dokter Hewan',
+                                      style: TextStyle(color: Color(0xFF7A93AA))),
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 6),
+                                    decoration: BoxDecoration(
+                                        color: Colors.green.shade50,
+                                        borderRadius: BorderRadius.circular(20)),
+                                    child: const Text('Aktif',
+                                        style: TextStyle(
+                                            color: Colors.green,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+
+                            // INFORMASI
+                            const Text('Informasi',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 16,
+                                    color: Color(0xFF0F2646))),
+                            const SizedBox(height: 16),
+                            _buildInfoRow(
+                                Icons.badge_outlined, 'SIP Vet', doctorSip),
+                            const SizedBox(height: 16),
+                            _buildInfoRow(
+                                Icons.email_outlined, 'Email', doctorEmail),
+                            const SizedBox(height: 16),
+                            _buildInfoRow(
+                                Icons.phone_outlined, 'No. Telepon', doctorPhone),
+                            const SizedBox(height: 16),
+                            _buildInfoRow(
+                                Icons.work_outline, 'Pengalaman', '$doctorExperience Tahun pengalaman'),
+                            const SizedBox(height: 32),
+
+                            // SPESIALISASI
+                            const Text('Spesialisasi',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 16,
+                                    color: Color(0xFF0F2646))),
+                            const SizedBox(height: 16),
+                            Wrap(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
+                                  decoration: BoxDecoration(
+                                      color: const Color(0xFFE3F2FD),
+                                      borderRadius: BorderRadius.circular(16)),
+                                  child: Text(doctorSpecialist,
+                                      style: const TextStyle(
+                                          color: Color(0xFF2196F3),
+                                          fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: ElevatedButton(
+                          onPressed: () {},
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2196F3),
+                            minimumSize: const Size(double.infinity, 50),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            elevation: 0,
+                          ),
+                          child: const Text('Edit Profil',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.white)),
+                        ),
                       ),
                     ],
-                  ),
-                ],
+                  );
+                },
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2196F3),
-                  minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  elevation: 0,
-                ),
-                child: const Text('Edit Profil',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Colors.white)),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

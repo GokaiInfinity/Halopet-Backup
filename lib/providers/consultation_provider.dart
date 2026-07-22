@@ -20,6 +20,19 @@ class ConsultationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> loadAll() async {
+    loading = true;
+    notifyListeners();
+    try {
+      items = await DatabaseHelper.instance.getAllConsultations();
+      error = null;
+    } catch (e) {
+      error = '$e';
+    }
+    loading = false;
+    notifyListeners();
+  }
+
   Future<void> loadDoctor(int doctorId) async {
     loading = true;
     notifyListeners();

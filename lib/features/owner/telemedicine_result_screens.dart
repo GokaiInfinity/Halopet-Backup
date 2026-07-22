@@ -11,7 +11,7 @@ class ConsultationResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final doctorName = args['doctor_name'] ?? 'Drh. Anisa Putri';
+    final doctorName = args['doctor_name'] ?? 'Dokter';
     final doctorSpec = args['doctor_specialist'] ?? 'Kulit & Bulu';
     final cid = args['id'] as int? ?? 0;
 
@@ -265,7 +265,7 @@ class ElectronicPrescriptionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final doctorName = args['doctor_name'] ?? 'Drh. Anisa Putri';
+    final doctorName = args['doctor_name'] ?? 'Dokter';
     final petName = args['pet_name'] ?? 'Hewan Anda';
     final cid = args['id'] as int? ?? 0;
 
