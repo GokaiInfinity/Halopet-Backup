@@ -24,7 +24,7 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
   List<Map<String, dynamic>> _messages = [];
   Timer? _timer;
 
-  int get consultationId => widget.args['consultation_id'] ?? 1;
+  int get consultationId => widget.args['consultation_id'] ?? widget.args['id'] ?? 1;
 
   @override
   void initState() {

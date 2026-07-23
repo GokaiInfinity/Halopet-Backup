@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../app/routes.dart';
+import '../../core/widgets/role_scaffolds.dart';
 import '../../providers/auth_provider.dart';
 
 import '../../database/database_helper.dart';
@@ -197,48 +198,9 @@ class DoctorSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 3,
-        onDestinationSelected: (i) {
-          final route = [
-            AppRoutes.doctorHome,
-            AppRoutes.doctorPatients,
-            AppRoutes.doctorSchedule,
-            AppRoutes.doctorSettings
-          ][i];
-          if (ModalRoute.of(context)?.settings.name != route) {
-            Navigator.pushNamedAndRemoveUntil(context, route, (r) => false);
-          }
-        },
-        destinations: const [
-          NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'Beranda'),
-          NavigationDestination(
-              icon: Icon(Icons.pets_outlined),
-              selectedIcon: Icon(Icons.pets),
-              label: 'Pasien'),
-          NavigationDestination(
-              icon: Icon(Icons.calendar_month_outlined),
-              selectedIcon: Icon(Icons.calendar_month),
-              label: 'Jadwal'),
-          NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: 'Akun'),
-        ],
-      ),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text('Pengaturan',
-            style: TextStyle(
-                color: Color(0xFF0F2646), fontWeight: FontWeight.w900)),
-        centerTitle: true,
-      ),
+    return DoctorScaffold(
+      title: 'Pengaturan',
+      index: 4,
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [

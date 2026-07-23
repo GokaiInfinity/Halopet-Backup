@@ -139,6 +139,7 @@ class DoctorScaffold extends StatelessWidget {
                 AppRoutes.doctorHome,
                 AppRoutes.doctorPatients,
                 AppRoutes.doctorSchedule,
+                AppRoutes.doctorConsultations,
                 AppRoutes.doctorProfile
               ][i];
               if (ModalRoute.of(context)?.settings.name != route)
@@ -157,6 +158,10 @@ class DoctorScaffold extends StatelessWidget {
                   icon: Icon(Icons.calendar_month_outlined),
                   selectedIcon: Icon(Icons.calendar_month),
                   label: 'Jadwal'),
+              NavigationDestination(
+                  icon: Icon(Icons.chat_bubble_outline),
+                  selectedIcon: Icon(Icons.chat_bubble),
+                  label: 'Pesan'),
               NavigationDestination(
                   icon: Icon(Icons.person_outline),
                   selectedIcon: Icon(Icons.person),

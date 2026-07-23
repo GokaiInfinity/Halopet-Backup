@@ -31,7 +31,7 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
 
     return DoctorScaffold(
       title: 'Konsultasi',
-      index: 0, 
+      index: 3, 
       body: p.loading
           ? const Center(child: CircularProgressIndicator())
           : p.items.isEmpty
