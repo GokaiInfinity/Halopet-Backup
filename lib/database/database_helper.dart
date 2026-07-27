@@ -14,7 +14,7 @@ class DatabaseHelper {
   Future<Database> _init() async {
     final path = join(await getDatabasesPath(), 'halopet.db');
     return openDatabase(path,
-        version: 8,
+        version: 10,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
         onOpen: (db) async => _seed(db));
@@ -40,7 +40,7 @@ class DatabaseHelper {
     await db.execute(
         '''CREATE TABLE screenings(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, difficulty_breathing INTEGER DEFAULT 0, seizures INTEGER DEFAULT 0, unconscious INTEGER DEFAULT 0, heavy_bleeding INTEGER DEFAULT 0, severe_trauma INTEGER DEFAULT 0, cannot_stand INTEGER DEFAULT 0, poisoning INTEGER DEFAULT 0, cannot_urinate INTEGER DEFAULT 0, continuous_vomiting INTEGER DEFAULT 0, result_category TEXT DEFAULT 'Ringan', FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
     await db.execute(
-        '''CREATE TABLE messages(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, sender_id INTEGER NOT NULL, message TEXT NOT NULL, created_at TEXT NOT NULL, FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
+        '''CREATE TABLE messages(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, sender_id INTEGER NOT NULL, message TEXT NOT NULL, is_read INTEGER DEFAULT 0, created_at TEXT NOT NULL, FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
     await db.execute(
         '''CREATE TABLE medical_records(id INTEGER PRIMARY KEY AUTOINCREMENT, pet_id INTEGER NOT NULL, doctor_id INTEGER NOT NULL, consultation_id INTEGER, diagnosis TEXT NOT NULL, treatment TEXT DEFAULT '', medicine TEXT DEFAULT '', notes TEXT DEFAULT '', date TEXT NOT NULL, FOREIGN KEY(pet_id) REFERENCES pets(id), FOREIGN KEY(doctor_id) REFERENCES doctors(id))''');
     await db.execute(
@@ -64,6 +64,13 @@ class DatabaseHelper {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 9) {
+      try {
+        await db.execute('ALTER TABLE messages ADD COLUMN is_read INTEGER DEFAULT 0');
+      } catch (e) {
+        // column might exist
+      }
+    }
     if (oldVersion < 2) {
       await db
           .execute('ALTER TABLE pets ADD COLUMN tanggal_lahir TEXT DEFAULT ""');
@@ -170,6 +177,45 @@ class DatabaseHelper {
     if (oldVersion < 8) {
       await db.execute("ALTER TABLE pets ADD COLUMN additional_photos TEXT DEFAULT '[]'");
     }
+    if (oldVersion < 10) {
+      final now = DateTime.now().toIso8601String();
+      final doc2Id = await db.insert('users', {
+        'name': 'drh. Budi Santoso',
+        'email': 'doctor2@halopet.com',
+        'password_hash': hashPassword('123456'),
+        'phone': '081234567893',
+        'role': 'doctor',
+        'created_at': now
+      });
+      await db.insert('doctors', {
+        'user_id': doc2Id,
+        'specialist': 'Hewan Besar',
+        'license': 'SIP-HP-002',
+        'rating': 4.9,
+        'experience': 10,
+        'bio': 'Spesialis hewan ternak dan hewan besar dengan pengalaman 10 tahun.',
+        'consultation_fee': 100000,
+        'verified': 1
+      });
+      final doc3Id = await db.insert('users', {
+        'name': 'drh. Citra Lestari',
+        'email': 'doctor3@halopet.com',
+        'password_hash': hashPassword('123456'),
+        'phone': '081234567894',
+        'role': 'doctor',
+        'created_at': now
+      });
+      await db.insert('doctors', {
+        'user_id': doc3Id,
+        'specialist': 'Hewan Eksotik',
+        'license': 'SIP-HP-003',
+        'rating': 4.7,
+        'experience': 5,
+        'bio': 'Penyayang hewan eksotik, siap membantu reptil dan burung kesayangan Anda.',
+        'consultation_fee': 150000,
+        'verified': 1
+      });
+    }
   }
 
   String hashPassword(String password) =>
@@ -213,6 +259,44 @@ class DatabaseHelper {
       'experience': 7,
       'bio': 'Dokter hewan dengan fokus pada kesehatan kucing dan anjing.',
       'consultation_fee': 75000,
+      'verified': 1
+    });
+
+    final doc2Id = await db.insert('users', {
+      'name': 'drh. Budi Santoso',
+      'email': 'doctor2@halopet.com',
+      'password_hash': hashPassword('123456'),
+      'phone': '081234567893',
+      'role': 'doctor',
+      'created_at': now
+    });
+    await db.insert('doctors', {
+      'user_id': doc2Id,
+      'specialist': 'Hewan Besar',
+      'license': 'SIP-HP-002',
+      'rating': 4.9,
+      'experience': 10,
+      'bio': 'Spesialis hewan ternak dan hewan besar dengan pengalaman 10 tahun.',
+      'consultation_fee': 100000,
+      'verified': 1
+    });
+
+    final doc3Id = await db.insert('users', {
+      'name': 'drh. Citra Lestari',
+      'email': 'doctor3@halopet.com',
+      'password_hash': hashPassword('123456'),
+      'phone': '081234567894',
+      'role': 'doctor',
+      'created_at': now
+    });
+    await db.insert('doctors', {
+      'user_id': doc3Id,
+      'specialist': 'Hewan Eksotik',
+      'license': 'SIP-HP-003',
+      'rating': 4.7,
+      'experience': 5,
+      'bio': 'Penyayang hewan eksotik, siap membantu reptil dan burung kesayangan Anda.',
+      'consultation_fee': 150000,
       'verified': 1
     });
     final petId = await db.insert('pets', {
@@ -266,7 +350,9 @@ class DatabaseHelper {
     });
 
     final dates =
-        List.generate(5, (i) => DateTime.now().add(Duration(days: i + 1)));
+        List.generate(14, (i) => DateTime.now().add(Duration(days: i + 1)))
+            .where((d) => d.weekday >= 1 && d.weekday <= 5)
+            .toList();
     for (final date in dates) {
       final ds =
           '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
@@ -471,6 +557,15 @@ class DatabaseHelper {
         'message': message,
         'created_at': DateTime.now().toIso8601String()
       });
+
+  Future<void> markMessagesAsRead(int consultationId, int userId) async {
+    await (await database).update(
+      'messages',
+      {'is_read': 1},
+      where: 'consultation_id = ? AND sender_id != ?',
+      whereArgs: [consultationId, userId],
+    );
+  }
 
   Future<List<Map<String, Object?>>> getMedicalRecordsForOwner(
       int ownerId) async {

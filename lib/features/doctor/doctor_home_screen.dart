@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:flutter/services.dart';
+
 import '../../app/routes.dart';
 import '../../app/theme.dart';
 import '../../core/widgets/common_widgets.dart';
@@ -48,21 +50,28 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     final finished = items.where((e) => e['status'] == 'finished').length;
     final cancelled = items.where((e) => e['status'] == 'cancelled').length;
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 0,
-        onDestinationSelected: (i) {
-          final route = [
-            AppRoutes.doctorHome,
-            AppRoutes.doctorPatients,
-            AppRoutes.doctorSchedule,
-            AppRoutes.doctorSettings
-          ][i];
-          if (ModalRoute.of(context)?.settings.name != route) {
-            Navigator.pushNamedAndRemoveUntil(context, route, (r) => false);
-          }
-        },
+    return PopScope(
+      canPop: Navigator.canPop(context),
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: 0,
+          onDestinationSelected: (i) {
+            final route = [
+              AppRoutes.doctorHome,
+              AppRoutes.doctorPatients,
+              AppRoutes.doctorSchedule,
+              AppRoutes.doctorSettings
+            ][i];
+            if (ModalRoute.of(context)?.settings.name != route) {
+              Navigator.pushNamedAndRemoveUntil(context, route, (r) => false);
+            }
+          },
         destinations: const [
           NavigationDestination(
               icon: Icon(Icons.home_outlined),
@@ -161,6 +170,76 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                   ),
                   const SizedBox(height: 32),
 
+                  // KONSULTASI AKTIF (LANGSUNG CHAT)
+                  Consumer<ConsultationProvider>(builder: (context, p, _) {
+                    final activeChats = p.items.where((c) {
+                      final st = (c['status'] as String? ?? '').toLowerCase();
+                      return st == 'in_progress' || st == 'accepted';
+                    }).toList();
+
+                    if (activeChats.isEmpty) return const SizedBox.shrink();
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Sedang Berlangsung',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 18,
+                                color: Color(0xFF0F2646))),
+                        const SizedBox(height: 16),
+                        ...activeChats.map((c) {
+                          final petName = c['pet_name'] as String? ?? 'Hewan';
+                          final ownerName = c['owner_name'] as String? ?? 'Pemilik';
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.pushNamed(
+                                  context, AppRoutes.consultationRoom,
+                                  arguments: {'consultation_id': c['id']});
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.blue.shade200),
+                              ),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: Colors.blue,
+                                    child: const Icon(Icons.chat_bubble_outline,
+                                        color: Colors.white, size: 20),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Chat dengan $ownerName',
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF0F2646))),
+                                        Text('Pasien: $petName',
+                                            style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Color(0xFF7A93AA))),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(Icons.chevron_right, color: Colors.blue),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                        const SizedBox(height: 32),
+                      ],
+                    );
+                  }),
+
                   // JADWAL HARI INI
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -226,7 +305,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                 ],
               ),
             ),
-    );
+    ));
   }
 
   Widget _buildSummaryItem(String count, String label) {

@@ -75,6 +75,14 @@ class _BookingScreenState extends State<BookingScreen> {
       }
     }
 
+    // Double check availability to prevent race conditions
+    final selectedSchedule = schedules.firstWhere((s) => s['id'] == scheduleId);
+    if (selectedSchedule['status'] != 'available') {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Jadwal ini sudah tidak tersedia. Silakan pilih jadwal lain.')));
+      return;
+    }
+
     setState(() => isSubmitting = true);
 
     try {
@@ -171,26 +179,35 @@ class _BookingScreenState extends State<BookingScreen> {
                       style:
                           TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 8),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: groupedSchedules.keys.map((date) {
-                        final isSelected = selectedDate == date;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ChoiceChip(
-                            label: Text(date),
-                            selected: isSelected,
-                            onSelected: (bool selected) {
-                              setState(() {
-                                selectedDate = date;
-                                scheduleId = null;
-                              });
-                            },
-                          ),
-                        );
-                      }).toList(),
+                  ListTile(
+                    title: Text(selectedDate ?? 'Pilih Tanggal'),
+                    trailing: const Icon(Icons.calendar_month, color: Colors.blue),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Colors.grey.shade300),
                     ),
+                    onTap: () async {
+                      final now = DateTime.now();
+                      final initial = selectedDate != null
+                          ? DateTime.tryParse(selectedDate!) ?? now
+                          : now;
+                      final date = await showDatePicker(
+                        context: context,
+                        initialDate: groupedSchedules.containsKey(DateFormat('yyyy-MM-dd').format(initial)) ? initial : DateTime.parse(groupedSchedules.keys.first),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2030),
+                        selectableDayPredicate: (day) {
+                          final dateStr = DateFormat('yyyy-MM-dd').format(day);
+                          return groupedSchedules.containsKey(dateStr);
+                        },
+                      );
+                      if (date != null) {
+                        setState(() {
+                          selectedDate = DateFormat('yyyy-MM-dd').format(date);
+                          scheduleId = null;
+                        });
+                      }
+                    },
                   ),
                   const SizedBox(height: 16),
                   if (selectedDate != null) ...[

@@ -333,24 +333,34 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
       String status,
       MaterialColor color,
       String formattedDate) {
-    return GestureDetector(
-      onTap: () => Navigator.pushNamed(
-          context, AppRoutes.doctorAppointmentDetail,
-          arguments: formattedDate),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFF0F4F8)),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withOpacity(0.02),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2)),
-            ]),
-        child: Row(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFF0F4F8)),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 4,
+                offset: const Offset(0, 2)),
+          ]),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            if (status.toLowerCase() == 'berlangsung') {
+              Navigator.pushNamed(context, AppRoutes.consultationRoom,
+                  arguments: {'consultation_id': 1}); // mock id for now
+            } else {
+              Navigator.pushNamed(context, AppRoutes.doctorAppointmentDetail,
+                  arguments: formattedDate);
+            }
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
@@ -400,6 +410,8 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
             ),
           ],
         ),
+      ),
+      ),
       ),
     );
   }

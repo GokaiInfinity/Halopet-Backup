@@ -42,6 +42,8 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
   }
 
   Future<void> _loadMessages() async {
+    final userId = context.read<AuthProvider>().user?.id ?? 1;
+    await DatabaseHelper.instance.markMessagesAsRead(consultationId, userId);
     final msgs = await DatabaseHelper.instance.getMessages(consultationId);
     if (mounted) {
       final wasAtBottom = _scrollController.hasClients &&
@@ -278,7 +280,7 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
                         const TextStyle(fontSize: 10, color: Color(0xFF7A93AA))),
                 if (isMe) ...[
                   const SizedBox(width: 4),
-                  const Icon(Icons.done_all, color: Colors.blue, size: 12),
+                  Icon(Icons.done_all, color: (msg['is_read'] as int? ?? 0) == 1 ? Colors.blue : Colors.grey, size: 12),
                 ]
               ],
             )

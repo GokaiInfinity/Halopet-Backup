@@ -7,6 +7,7 @@ import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/role_scaffolds.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/consultation_provider.dart';
+import '../../database/database_helper.dart';
 
 class DoctorConsultationsScreen extends StatefulWidget {
   const DoctorConsultationsScreen({super.key});
@@ -20,9 +21,15 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => context
-        .read<ConsultationProvider>()
-        .loadDoctor(context.read<AuthProvider>().user!.id));
+    _loadConsultations();
+  }
+
+  Future<void> _loadConsultations() async {
+    final userId = context.read<AuthProvider>().user!.id;
+    final doctor = await DatabaseHelper.instance.getDoctorByUser(userId);
+    if (doctor != null && mounted) {
+      context.read<ConsultationProvider>().loadDoctor(doctor['id'] as int);
+    }
   }
 
   @override
@@ -78,7 +85,7 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: status == 'COMPLETED'
+                                    color: status.toUpperCase() == 'COMPLETED' || status.toUpperCase() == 'FINISHED'
                                         ? Colors.green.shade50
                                         : Colors.orange.shade50,
                                     borderRadius: BorderRadius.circular(12),
@@ -88,7 +95,7 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
                                     style: TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
-                                      color: status == 'COMPLETED'
+                                      color: status.toUpperCase() == 'COMPLETED' || status.toUpperCase() == 'FINISHED'
                                           ? Colors.green
                                           : Colors.orange,
                                     ),
@@ -106,14 +113,14 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed: status == 'IN_PROGRESS' || status == 'ACCEPTED'
+                                onPressed: status.toUpperCase() == 'IN_PROGRESS' || status.toUpperCase() == 'ACCEPTED'
                                     ? () {
                                         Navigator.pushNamed(
                                             context, AppRoutes.consultationRoom,
                                             arguments: {'consultation_id': c['id']});
                                       }
                                     : null,
-                                child: Text(status == 'IN_PROGRESS' || status == 'ACCEPTED' ? 'Masuk Ruang Konsultasi' : 'Selesai'),
+                                child: Text(status.toUpperCase() == 'IN_PROGRESS' || status.toUpperCase() == 'ACCEPTED' ? 'Masuk Ruang Konsultasi' : 'Selesai'),
                               ),
                             )
                           ],

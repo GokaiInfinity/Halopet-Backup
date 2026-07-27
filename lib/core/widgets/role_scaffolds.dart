@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../app/routes.dart';
 
 class OwnerScaffold extends StatelessWidget {
@@ -16,42 +17,48 @@ class OwnerScaffold extends StatelessWidget {
   final int index;
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: title.isEmpty
-          ? null
-          : AppBar(
-              title: Text(title,
-                  style: const TextStyle(fontWeight: FontWeight.w800)),
-              actions: actions),
-      body: body,
-      floatingActionButton: floatingActionButton,
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          height: 64,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            border: Border(top: BorderSide(color: Color(0xFFF0F0F0))),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(context, 0, Icons.home, Icons.home_outlined,
-                  'Beranda', AppRoutes.ownerHome),
-              _buildNavItem(context, 1, Icons.pets, Icons.pets_outlined,
-                  'Hewan', AppRoutes.ownerPets),
-              _buildCenterNavItem(
-                  context, 2, 'Konsultasi', AppRoutes.doctorList),
-              _buildNavItem(
-                  context,
-                  3,
-                  Icons.chat_bubble,
-                  Icons.chat_bubble_outline,
-                  'Pesan',
-                  AppRoutes.ownerConsultations),
-              _buildNavItem(context, 4, Icons.person, Icons.person_outline,
-                  'Akun', AppRoutes.ownerProfile),
-            ],
+    return PopScope(
+      canPop: Navigator.canPop(context),
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) SystemNavigator.pop();
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
+        appBar: title.isEmpty
+            ? null
+            : AppBar(
+                title: Text(title,
+                    style: const TextStyle(fontWeight: FontWeight.w800)),
+                actions: actions),
+        body: body,
+        floatingActionButton: floatingActionButton,
+        bottomNavigationBar: SafeArea(
+          child: Container(
+            height: 64,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: Color(0xFFF0F0F0))),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(context, 0, Icons.home, Icons.home_outlined,
+                    'Beranda', AppRoutes.ownerHome),
+                _buildNavItem(context, 1, Icons.pets, Icons.pets_outlined,
+                    'Hewan', AppRoutes.ownerPets),
+                _buildCenterNavItem(
+                    context, 2, 'Konsultasi', AppRoutes.ownerConsultations),
+                _buildNavItem(
+                    context,
+                    3,
+                    Icons.chat_bubble,
+                    Icons.chat_bubble_outline,
+                    'Pesan',
+                    AppRoutes.ownerConsultations),
+                _buildNavItem(context, 4, Icons.person, Icons.person_outline,
+                    'Akun', AppRoutes.ownerProfile),
+              ],
+            ),
           ),
         ),
       ),
@@ -71,6 +78,7 @@ class OwnerScaffold extends StatelessWidget {
           }
         },
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(isSelected ? activeIcon : inactiveIcon,
@@ -99,6 +107,7 @@ class OwnerScaffold extends StatelessWidget {
           }
         },
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
@@ -127,8 +136,13 @@ class DoctorScaffold extends StatelessWidget {
   final Widget body;
   final int index;
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
+  Widget build(BuildContext context) => PopScope(
+        canPop: Navigator.canPop(context),
+        onPopInvokedWithResult: (didPop, result) {
+          if (!didPop) SystemNavigator.pop();
+        },
+        child: Scaffold(
+          appBar: AppBar(
             title: Text(title,
                 style: const TextStyle(fontWeight: FontWeight.w800))),
         body: body,
@@ -162,12 +176,12 @@ class DoctorScaffold extends StatelessWidget {
                   icon: Icon(Icons.chat_bubble_outline),
                   selectedIcon: Icon(Icons.chat_bubble),
                   label: 'Pesan'),
-              NavigationDestination(
-                  icon: Icon(Icons.person_outline),
-                  selectedIcon: Icon(Icons.person),
-                  label: 'Akun'),
-            ]),
-      );
+          NavigationDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person),
+              label: 'Akun'),
+        ]),
+  ));
 }
 
 class AdminScaffold extends StatelessWidget {
@@ -177,9 +191,14 @@ class AdminScaffold extends StatelessWidget {
   final Widget body;
   final int index;
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: title.isEmpty
-            ? null
+  Widget build(BuildContext context) => PopScope(
+        canPop: Navigator.canPop(context),
+        onPopInvokedWithResult: (didPop, result) {
+          if (!didPop) SystemNavigator.pop();
+        },
+        child: Scaffold(
+          appBar: title.isEmpty
+              ? null
             : AppBar(
                 title: Text(title,
                     style: const TextStyle(fontWeight: FontWeight.w800))),
@@ -208,5 +227,5 @@ class AdminScaffold extends StatelessWidget {
               NavigationDestination(
                   icon: Icon(Icons.person_outline), label: 'Akun'),
             ]),
-      );
+      ));
 }

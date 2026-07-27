@@ -45,7 +45,7 @@ class _DoctorConsultationResultFormScreenState
 
     setState(() => _isLoading = true);
     try {
-      final cid = widget.args['id'] as int;
+      final cid = (widget.args['id'] ?? widget.args['consultation_id']) as int;
       final provider = context.read<ConsultationProvider>();
 
       // Save consultation result
