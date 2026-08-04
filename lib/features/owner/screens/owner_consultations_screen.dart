@@ -62,7 +62,7 @@ class _OwnerConsultationsScreenState extends State<OwnerConsultationsScreen> {
                             ]),
                             const SizedBox(height: 8),
                             Text(
-                                '${c['pet_name']} • ${c['schedule_date'] ?? '-'} ${c['schedule_time'] ?? ''}',
+                                '${c['pet_name']} • ${_formatDate(c['schedule_date'] as String?)} ${c['schedule_time'] ?? ''}',
                                 style: const TextStyle(color: AppColors.muted)),
                             const SizedBox(height: 8),
                             Text('${c['complaint']}',
@@ -85,7 +85,8 @@ class _OwnerConsultationsScreenState extends State<OwnerConsultationsScreen> {
                                 ),
                                 child: const Text('Bayar Sekarang',
                                     style: TextStyle(color: Colors.white)),
-                              )
+                              ),
+                              _buildCancelButton(context, c['id'] as int),
                             ] else if (c['status'] == 'scheduled') ...[
                               const SizedBox(height: 12),
                               ElevatedButton(
@@ -100,7 +101,8 @@ class _OwnerConsultationsScreenState extends State<OwnerConsultationsScreen> {
                                 ),
                                 child: const Text('Persiapan Konsultasi',
                                     style: TextStyle(color: Colors.white)),
-                              )
+                              ),
+                              _buildCancelButton(context, c['id'] as int),
                             ] else if (c['status'] == 'in_progress' ||
                                 c['status'] == 'accepted') ...[
                               const SizedBox(height: 12),
@@ -156,10 +158,16 @@ class _OwnerConsultationsScreenState extends State<OwnerConsultationsScreen> {
                               if (c['review_id'] == null) ...[
                                 const SizedBox(height: 8),
                                 ElevatedButton(
-                                  onPressed: () {
-                                    Navigator.pushNamed(
+                                  onPressed: () async {
+                                    await Navigator.pushNamed(
                                         context, AppRoutes.reviewForm,
                                         arguments: c);
+                                    if (context.mounted) {
+                                      final userId = context.read<AuthProvider>().user?.id;
+                                      if (userId != null) {
+                                        context.read<ConsultationProvider>().loadOwner(userId);
+                                      }
+                                    }
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.amber,
@@ -174,4 +182,53 @@ class _OwnerConsultationsScreenState extends State<OwnerConsultationsScreen> {
                           ]));
                     }));
   }
+
+  Widget _buildCancelButton(BuildContext context, int id) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8.0),
+      child: OutlinedButton(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Batalkan Konsultasi?'),
+              content: const Text('Apakah Anda yakin ingin membatalkan jadwal konsultasi ini?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Tidak', style: TextStyle(color: Colors.grey)),
+                ),
+                TextButton(
+                  onPressed: () {
+                    context.read<ConsultationProvider>().updateStatus(id, 'cancelled');
+                    Navigator.pop(ctx);
+                  },
+                  child: const Text('Ya, Batalkan', style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            ),
+          );
+        },
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.red,
+          side: const BorderSide(color: Colors.red),
+          minimumSize: const Size(double.infinity, 36),
+        ),
+        child: const Text('Batalkan Konsultasi'),
+      ),
+    );
+  }
+}
+
+String _formatDate(String? raw) {
+  if (raw == null || raw.isEmpty) return '-';
+  try {
+    final parts = raw.split(' ')[0].split('-');
+    if (parts.length == 3) {
+      if (parts[0].length == 4) { // yyyy-mm-dd
+        return '${parts[2]}-${parts[1]}-${parts[0]}';
+      }
+    }
+  } catch (_) {}
+  return raw;
 }

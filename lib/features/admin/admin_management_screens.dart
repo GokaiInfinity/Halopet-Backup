@@ -2,10 +2,29 @@ import 'package:flutter/material.dart';
 
 import '../../app/routes.dart';
 import '../../core/widgets/role_scaffolds.dart';
+import '../../database/database_helper.dart';
 
 // ==== MOCKUP 09: MANAJEMEN PASIEN ====
-class AdminPatientManagementScreen extends StatelessWidget {
+class AdminPatientManagementScreen extends StatefulWidget {
   const AdminPatientManagementScreen({super.key});
+
+  @override
+  State<AdminPatientManagementScreen> createState() => _AdminPatientManagementScreenState();
+}
+
+class _AdminPatientManagementScreenState extends State<AdminPatientManagementScreen> {
+  DateTime? _startDate;
+  DateTime? _endDate;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    if (args != null) {
+      _startDate = args['startDate'] as DateTime?;
+      _endDate = args['endDate'] as DateTime?;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,20 +106,21 @@ class AdminPatientManagementScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
                     Expanded(
-                      child: ListView(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        children: [
-                          _buildPatientItem(context, 'Milo', 'Golden Retriever',
-                              'Adel Pratama', true),
-                          _buildPatientItem(context, 'Luna', 'Kucing Anggora',
-                              'Siti Aisyah', true),
-                          _buildPatientItem(context, 'Max', 'Kucing Persia',
-                              'Budi Santoso', true),
-                          _buildPatientItem(context, 'Bella', 'Anjing Poodle',
-                              'Rina Marlina', true),
-                          _buildPatientItem(context, 'Coco',
-                              'Kucing Maine Coon', 'Dwi Lestari', false),
-                        ],
+                      child: FutureBuilder<List<Map<String, dynamic>>>(
+                        future: DatabaseHelper.instance.getAdminPatients(startDate: _startDate, endDate: _endDate),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+                          final patients = snapshot.data ?? [];
+                          return TabBarView(
+                            children: [
+                              _buildPatientList(patients),
+                              _buildPatientList(patients), // Simulasi aktif (mock)
+                              _buildPatientList([]), // Simulasi nonaktif (mock)
+                            ],
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -140,8 +160,29 @@ class AdminPatientManagementScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildPatientList(List<Map<String, dynamic>> patients) {
+    if (patients.isEmpty) return const Center(child: Text("Tidak ada data pasien"));
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      itemCount: patients.length,
+      itemBuilder: (context, index) {
+        final patient = patients[index];
+        return _buildPatientItem(
+          context,
+          patient['name'] ?? 'Unknown',
+          patient['breed'] ?? 'Unknown',
+          patient['owner_name'] ?? 'Unknown',
+          true,
+          (val) {
+            // mock toggle
+          }
+        );
+      },
+    );
+  }
+
   Widget _buildPatientItem(BuildContext context, String name, String breed,
-      String owner, bool isActive) {
+      String owner, bool isActive, ValueChanged<bool> onToggle) {
     return GestureDetector(
       onTap: () => Navigator.pushNamed(context, AppRoutes.adminPatientDetail),
       child: Container(
@@ -184,13 +225,23 @@ class AdminPatientManagementScreen extends StatelessWidget {
                 ],
               ),
             ),
-            Text(
-              isActive ? 'Aktif' : 'Nonaktif',
-              style: TextStyle(
-                color: isActive ? Colors.green : Colors.red,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Switch(
+                  value: isActive,
+                  activeColor: Colors.green,
+                  onChanged: onToggle,
+                ),
+                Text(
+                  isActive ? 'Aktif' : 'Nonaktif',
+                  style: TextStyle(
+                    color: isActive ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -360,11 +411,22 @@ class AdminPatientDetailScreen extends StatelessWidget {
 }
 
 // ==== MOCKUP 11: MANAJEMEN DOKTER ====
-class AdminDoctorManagementScreen extends StatelessWidget {
+class AdminDoctorManagementScreen extends StatefulWidget {
   const AdminDoctorManagementScreen({super.key});
 
   @override
+  State<AdminDoctorManagementScreen> createState() => _AdminDoctorManagementScreenState();
+}
+
+class _AdminDoctorManagementScreenState extends State<AdminDoctorManagementScreen> {
+  Key _refreshKey = UniqueKey();
+
+  @override
   Widget build(BuildContext context) {
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final startDate = args?['startDate'] as DateTime?;
+    final endDate = args?['endDate'] as DateTime?;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -455,18 +517,24 @@ class AdminDoctorManagementScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
                     Expanded(
-                      child: ListView(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        children: [
-                          _buildDoctorItem('Drh. Anisa Putri',
-                              'Spesialis Hewan Kecil', true),
-                          _buildDoctorItem('Drh. Bimo Ardi',
-                              'Spesialis Hewan Eksotik', true),
-                          _buildDoctorItem('Drh. Citra Angel',
-                              'Spesialis Hewan Besar', false),
-                          _buildDoctorItem(
-                              'Drh. Eko Wibowo', 'Spesialis Kulit', true),
-                        ],
+                      child: FutureBuilder<List<Map<String, dynamic>>>(
+                        key: _refreshKey,
+                        future: DatabaseHelper.instance.getAdminDoctors(startDate: startDate, endDate: endDate),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+                          final doctors = snapshot.data ?? [];
+                          if (doctors.isEmpty) return const Center(child: Text("Tidak ada dokter"));
+                          return ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            itemCount: doctors.length,
+                            itemBuilder: (context, index) {
+                              final doctor = doctors[index];
+                              return _buildDoctorItem(doctor, doctor['verified'] == 1);
+                            },
+                          );
+                        }
                       ),
                     ),
                   ],
@@ -507,7 +575,7 @@ class AdminDoctorManagementScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDoctorItem(String name, String spec, bool isActive) {
+  Widget _buildDoctorItem(Map<String, dynamic> doctor, bool isActive) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -528,28 +596,100 @@ class AdminDoctorManagementScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name,
+                Text(doctor['name'] ?? 'Dokter',
                     style: const TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 16,
                         color: Color(0xFF0F2646))),
                 const SizedBox(height: 4),
-                Text(spec,
+                Text(doctor['specialist'] ?? 'Spesialis',
                     style: const TextStyle(
                         color: Color(0xFF7A93AA), fontSize: 12)),
               ],
             ),
           ),
-          Text(
-            isActive ? 'Aktif' : 'Nonaktif',
-            style: TextStyle(
-              color: isActive ? Colors.green : Colors.red,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                isActive ? 'Aktif' : 'Nonaktif',
+                style: TextStyle(
+                  color: isActive ? Colors.green : Colors.red,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () {
+                  _showEditFeeDialog(doctor);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue.shade200)
+                  ),
+                  child: const Text('Atur Harga', style: TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
+              )
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  void _showEditFeeDialog(Map<String, dynamic> doctor) {
+    final feeController = TextEditingController(text: (doctor['consultation_fee'] ?? 50000).toString());
+    
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Atur Harga: ${doctor['name']}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Harga Konsultasi Baru (Rp)', style: TextStyle(fontSize: 14)),
+              const SizedBox(height: 8),
+              TextField(
+                controller: feeController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  prefixText: 'Rp ',
+                ),
+              )
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                // Remove any dots or commas that the user might have entered
+                final cleanedText = feeController.text.replaceAll(RegExp(r'[^0-9]'), '');
+                final newFee = double.tryParse(cleanedText);
+                if (newFee != null) {
+                  await DatabaseHelper.instance.updateDoctorFee(doctor['id'], newFee);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    setState(() {
+                      _refreshKey = UniqueKey();
+                    });
+                  }
+                }
+              },
+              child: const Text('Simpan'),
+            )
+          ],
+        );
+      }
     );
   }
 }

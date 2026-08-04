@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../app/routes.dart';
 import '../../core/widgets/role_scaffolds.dart';
 import '../../providers/auth_provider.dart';
+import '../../database/database_helper.dart';
 
 // ==== MOCKUP 17: TRANSAKSI & PEMBAYARAN ====
 class AdminTransactionScreen extends StatelessWidget {
@@ -92,45 +93,35 @@ class AdminTransactionScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
                     Expanded(
-                      child: ListView(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        children: [
-                          _buildTransactionItem(
-                              'INV-2025-0519-001',
-                              'Milo (Golden Retriever)',
-                              'Rp150.000',
-                              '19 Mei 2025',
-                              'Menunggu',
-                              Colors.orange),
-                          _buildTransactionItem(
-                              'INV-2025-0519-002',
-                              'Luna (Kucing Anggora)',
-                              'Rp200.000',
-                              '19 Mei 2025',
-                              'Selesai',
-                              Colors.green),
-                          _buildTransactionItem(
-                              'INV-2025-0518-015',
-                              'Max (Kucing Persia)',
-                              'Rp250.000',
-                              '18 Mei 2025',
-                              'Selesai',
-                              Colors.green),
-                          _buildTransactionItem(
-                              'INV-2025-0518-014',
-                              'Bella (Poodle)',
-                              'Rp120.000',
-                              '18 Mei 2025',
-                              'Dibatalkan',
-                              Colors.red),
-                          _buildTransactionItem(
-                              'INV-2025-0517-009',
-                              'Coco (Kucing Maine Coon)',
-                              'Rp180.000',
-                              '17 Mei 2025',
-                              'Selesai',
-                              Colors.green),
-                        ],
+                      child: FutureBuilder<List<Map<String, dynamic>>>(
+                        future: DatabaseHelper.instance.getAdminTransactions(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+                          final tx = snapshot.data ?? [];
+                          if (tx.isEmpty) return const Center(child: Text("Belum ada transaksi"));
+                          return ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            itemCount: tx.length,
+                            itemBuilder: (context, index) {
+                              final item = tx[index];
+                              Color sColor = Colors.green;
+                              String sts = item['status'] ?? '';
+                              if (sts == 'waiting' || sts == 'menunggu' || sts == 'scheduled') sColor = Colors.orange;
+                              if (sts == 'cancelled' || sts == 'dibatalkan') sColor = Colors.red;
+                              
+                              return _buildTransactionItem(
+                                'INV-${item['id']}',
+                                '${item['pet_name']}',
+                                '-', // Amount from medical_records or orders if available
+                                '${item['created_at']}',
+                                sts,
+                                sColor
+                              );
+                            },
+                          );
+                        }
                       ),
                     ),
                   ],
@@ -234,21 +225,36 @@ class AdminReportScreen extends StatelessWidget {
                       fontSize: 16,
                       color: Color(0xFF0F2646))),
               const SizedBox(height: 16),
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 1.5,
-                children: [
-                  _buildStatCard(
-                      'Total Konsultasi', '128', '+12%', Colors.green),
-                  _buildStatCard('Total Pasien', '96', '+8%', Colors.green),
-                  _buildStatCard(
-                      'Pendapatan', 'Rp 25.450.000', '+15%', Colors.green),
-                  _buildStatCard('Transaksi', '84', '+10%', Colors.green),
-                ],
+              FutureBuilder<Map<String, dynamic>>(
+                future: DatabaseHelper.instance.getAdminReportStats(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final stats = snapshot.data ?? {
+                    'total_konsultasi': 0,
+                    'total_pasien': 0,
+                    'pendapatan': 0,
+                    'transaksi': 0,
+                  };
+                  
+                  return GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                    childAspectRatio: 1.5,
+                    children: [
+                      _buildStatCard(
+                          'Total Konsultasi', '${stats['total_konsultasi']}', '+0%', Colors.green),
+                      _buildStatCard('Total Pasien', '${stats['total_pasien']}', '+0%', Colors.green),
+                      _buildStatCard(
+                          'Pendapatan', 'Rp ${stats['pendapatan']}', '+0%', Colors.green),
+                      _buildStatCard('Transaksi', '${stats['transaksi']}', '+0%', Colors.green),
+                    ],
+                  );
+                }
               ),
               const SizedBox(height: 32),
 
@@ -347,14 +353,16 @@ class AdminSettingsScreen extends StatelessWidget {
                 'Informasi dan detail klinik'),
             _buildSettingItem(Icons.access_time, 'Jam Operasional',
                 'Atur jam buka dan tutup'),
-            _buildSettingItem(Icons.notifications_outlined, 'Notifikasi',
-                'Pengaturan notifikasi sistem'),
+            _buildSettingItem(Icons.notifications_none, 'Pengaturan Notifikasi',
+                'Pengaturan notifikasi sistem',
+                onTap: () => Navigator.pushNamed(context, AppRoutes.adminNotificationSettings)),
             _buildSettingItem(
                 Icons.restore, 'Backup & Restore', 'Kelola data cadangan'),
             _buildSettingItem(
                 Icons.security, 'Keamanan', 'Pengaturan keamanan akun'),
             _buildSettingItem(
-                Icons.api, 'Integrasi', 'API & integrasi pihak ketiga'),
+                Icons.api, 'Integrasi', 'API & integrasi pihak ketiga',
+                onTap: () => Navigator.pushNamed(context, AppRoutes.adminIntegration)),
             const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
@@ -412,6 +420,103 @@ class AdminSettingsScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ==== MOCKUP: PENGATURAN INTEGRASI ====
+class AdminIntegrationScreen extends StatelessWidget {
+  const AdminIntegrationScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Color(0xFF0F2646), size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('Integrasi', style: TextStyle(color: Color(0xFF0F2646), fontWeight: FontWeight.w800)),
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Payment Gateway', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF0F2646))),
+            const SizedBox(height: 8),
+            const Text('Kelola integrasi dengan pihak ketiga untuk sistem pembayaran (Midtrans).', style: TextStyle(color: Color(0xFF7A93AA))),
+            const SizedBox(height: 24),
+            
+            _buildKeyField('Merchant ID', 'M484636348'),
+            const SizedBox(height: 16),
+            _buildKeyField('Client Key', 'Mid-client-Jx_1dcTV51vSN9Ae'),
+            const SizedBox(height: 16),
+            _buildKeyField('Server Key', 'Mid-server-0Fe0042EwKPiqeau9Q1a7YjV', isObscured: true),
+            
+            const SizedBox(height: 32),
+            const Text('Setting URL endpoints', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F2646))),
+            const SizedBox(height: 16),
+            _buildUrlField('Payment Notification URL', 'http://10.0.2.2:3000/api/payment/webhook'),
+            const SizedBox(height: 16),
+            _buildUrlField('Finish Redirect URL', 'halopet://payment-success'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildKeyField(String label, String value, {bool isObscured = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: TextEditingController(text: value),
+          readOnly: true,
+          obscureText: isObscured,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.grey.shade50,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.copy, color: Colors.grey, size: 20),
+              onPressed: () {},
+            )
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildUrlField(String label, String url) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300)
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.link, color: Colors.grey, size: 18),
+              const SizedBox(width: 8),
+              Expanded(child: Text(url, style: const TextStyle(color: Colors.black87))),
+            ],
+          ),
+        )
+      ],
     );
   }
 }
@@ -479,20 +584,24 @@ class AdminUserAccessScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
                     Expanded(
-                      child: ListView(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        children: [
-                          _buildUserItem(
-                              'Admin Utama', 'admin@halopet.id', 'Admin', true),
-                          _buildUserItem(
-                              'Rina Agustina', 'tina@halopet.id', 'Staf', true),
-                          _buildUserItem('Doni Pratama', 'doni@halopet.id',
-                              'Resepsionis', true),
-                          _buildUserItem('Siti Nurhaliza', 'siti@halopet.id',
-                              'Staf', false),
-                          _buildUserItem(
-                              'Andi Wijaya', 'andi@halopet.id', 'Admin', true),
-                        ],
+                      child: FutureBuilder<List<Map<String, dynamic>>>(
+                        future: DatabaseHelper.instance.getAllUsers(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+                          final users = snapshot.data ?? [];
+                          if (users.isEmpty) return const Center(child: Text("Belum ada data pengguna"));
+                          
+                          return TabBarView(
+                            children: [
+                              _buildUserList(users),
+                              _buildUserList(users.where((u) => u['role'] == 'admin').toList()),
+                              _buildUserList(users.where((u) => u['role'] == 'owner').toList()),
+                              _buildUserList(users.where((u) => u['role'] == 'doctor').toList()),
+                            ],
+                          );
+                        }
                       ),
                     ),
                   ],
@@ -502,6 +611,23 @@ class AdminUserAccessScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildUserList(List<Map<String, dynamic>> users) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      itemCount: users.length,
+      itemBuilder: (context, index) {
+        final user = users[index];
+        final isActive = user['isActive'];
+        final bool active = isActive == null ? true : (isActive == 1 || isActive == true);
+        return _buildUserItem(
+            user['name']?.toString() ?? 'Unknown', 
+            user['email']?.toString() ?? '', 
+            user['role']?.toString() ?? 'owner', 
+            active);
+      },
     );
   }
 

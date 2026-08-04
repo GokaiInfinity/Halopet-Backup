@@ -1,8 +1,13 @@
 import '../auth_utils.dart';
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../app/routes.dart';
+import '../../../app/theme.dart';
+import '../../../core/widgets/common_widgets.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../services/whapi_service.dart';
 import '../../../app/theme.dart';
 import '../../../core/widgets/common_widgets.dart';
 import '../../../providers/auth_provider.dart';
@@ -35,17 +40,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> submit() async {
     if (!form.currentState!.validate() || !agreeToTerms) return;
+    
+    // Tampilkan loading dengan mengubah state (walau sementara hanya memblokir)
     final auth = context.read<AuthProvider>();
+    auth.setLoading(true);
     
-    final success = await auth.register(
-      name: name.text,
-      email: email.text,
-      password: password.text,
-      phone: phone.text,
-    );
+    // Generate OTP 4 digit
+    String generatedOtp = (1000 + Random().nextInt(9000)).toString();
     
-    if (success && mounted) {
-      Navigator.pushNamed(context, AppRoutes.otp, arguments: {'email': email.text});
+    // Kirim OTP via WhatsApp (Whapi Cloud)
+    bool isSent = await WhapiService.sendOtpWhatsApp(phone.text, generatedOtp);
+    
+    auth.setLoading(false);
+    
+    if (isSent && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kode OTP telah dikirim ke WhatsApp Anda.')),
+      );
+      Navigator.pushNamed(
+        context, 
+        AppRoutes.otp, 
+        arguments: {
+          'name': name.text,
+          'email': email.text,
+          'password': password.text,
+          'phone': phone.text,
+          'sentOtp': generatedOtp
+        }
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal mengirim OTP WhatsApp. Periksa nomor Anda.')),
+      );
     }
   }
 
@@ -60,7 +86,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new,
               color: Color(0xFF0F2646), size: 20),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              Navigator.pushReplacementNamed(context, AppRoutes.login);
+            }
+          },
         ),
         title: const Text('Daftar akun',
             style: TextStyle(

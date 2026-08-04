@@ -45,7 +45,7 @@ class _BookingScreenState extends State<BookingScreen> {
     final availableSchedules =
         schedules.where((s) => s['status'] == 'available').toList();
     if (availableSchedules.isNotEmpty) {
-      selectedDate = availableSchedules.first['date'] as String;
+      selectedDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
     }
 
     setState(() => loading = false);
@@ -180,21 +180,38 @@ class _BookingScreenState extends State<BookingScreen> {
                           TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 8),
                   ListTile(
-                    title: Text(selectedDate ?? 'Pilih Tanggal'),
+                    title: Text(selectedDate != null ? DateFormat('dd-MM-yyyy').format(DateTime.parse(selectedDate!)) : 'Pilih Tanggal'),
                     trailing: const Icon(Icons.calendar_month, color: Colors.blue),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                       side: BorderSide(color: Colors.grey.shade300),
                     ),
                     onTap: () async {
+                      if (groupedSchedules.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Dokter ini belum memiliki jadwal.')));
+                        return;
+                      }
+                      
                       final now = DateTime.now();
-                      final initial = selectedDate != null
-                          ? DateTime.tryParse(selectedDate!) ?? now
-                          : now;
+                      final today = DateTime(now.year, now.month, now.day);
+                      
+                      final validDates = groupedSchedules.keys.where((d) {
+                        return !DateTime.parse(d).isBefore(today);
+                      }).toList()..sort();
+
+                      if (validDates.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tidak ada jadwal ke depannya untuk dokter ini.')));
+                        return;
+                      }
+
+                      final initialStr = selectedDate != null && validDates.contains(selectedDate)
+                          ? selectedDate!
+                          : validDates.first;
+                          
                       final date = await showDatePicker(
                         context: context,
-                        initialDate: groupedSchedules.containsKey(DateFormat('yyyy-MM-dd').format(initial)) ? initial : DateTime.parse(groupedSchedules.keys.first),
-                        firstDate: DateTime(2020),
+                        initialDate: DateTime.parse(initialStr),
+                        firstDate: today,
                         lastDate: DateTime(2030),
                         selectableDayPredicate: (day) {
                           final dateStr = DateFormat('yyyy-MM-dd').format(day);
@@ -215,22 +232,25 @@ class _BookingScreenState extends State<BookingScreen> {
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 16)),
                     const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: groupedSchedules[selectedDate]!.map((s) {
-                        final isSelected = scheduleId == s['id'];
-                        return ChoiceChip(
-                          label: Text(s['time'] as String),
-                          selected: isSelected,
-                          onSelected: (bool selected) {
-                            setState(() {
-                              scheduleId = s['id'] as int;
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
+                    if (groupedSchedules[selectedDate] == null || groupedSchedules[selectedDate]!.isEmpty)
+                      const Text('Tidak ada jadwal tersedia di tanggal ini.', style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic))
+                    else
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: (groupedSchedules[selectedDate] ?? []).map((s) {
+                          final isSelected = scheduleId == s['id'];
+                          return ChoiceChip(
+                            label: Text(s['time'] as String),
+                            selected: isSelected,
+                            onSelected: (bool selected) {
+                              setState(() {
+                                scheduleId = s['id'] as int;
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
                   ],
                 ],
                 const SizedBox(height: 14),
@@ -239,7 +259,7 @@ class _BookingScreenState extends State<BookingScreen> {
                       controller: complaint,
                       maxLines: 4,
                       decoration: const InputDecoration(
-                          labelText: 'Keluhan utama',
+                          labelText: 'Deskripsi singkat',
                           alignLabelWithHint: true)),
                   const SizedBox(height: 24),
                 ],

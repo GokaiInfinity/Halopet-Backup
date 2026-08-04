@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../database/database_helper.dart';
 
 import '../../app/routes.dart';
 import '../../core/widgets/role_scaffolds.dart';
@@ -12,8 +15,37 @@ class DoctorScheduleScreen extends StatefulWidget {
 }
 
 class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
-  DateTime _selectedDate =
-      DateTime(2025, 5, 20); // Dummy start date to match mockup
+  DateTime _selectedDate = DateTime(2026, 7, 20); // Sync to DB dummy date
+  List<Map<String, dynamic>> _allEvents = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final userId = context.read<AuthProvider>().user?.id;
+    if (userId != null) {
+      final doctor = await DatabaseHelper.instance.getDoctorByUser(userId);
+      if (doctor != null) {
+        final events = await DatabaseHelper.instance.getDoctorCalendarEvents(doctor['id'] as int);
+        if (mounted) {
+          setState(() {
+            _allEvents = events;
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+    }
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   String _formatDate(DateTime date) {
     const days = [
@@ -42,115 +74,231 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
     return '${days[date.weekday - 1]}, ${date.day} ${months[date.month - 1]} ${date.year}';
   }
 
-  List<Map<String, dynamic>> _getRawDataForDate(DateTime date) {
-    if (date.day == 20 && date.month == 5 && date.year == 2025) {
-      return [
-        {
-          'time': '09:00',
-          'pet': 'Milo',
-          'breed': 'Golden Retriever',
-          'type': 'Konsultasi Online',
-          'status': 'Berlangsung',
-          'color': Colors.green
-        },
-        {
-          'time': '10:00',
-          'pet': 'Luna',
-          'breed': 'Kucing Anggora',
-          'type': 'Konsultasi Online',
-          'status': 'Menunggu',
-          'color': Colors.orange
-        },
-        {
-          'time': '11:00',
-          'pet': 'Max',
-          'breed': 'Kucing Persia',
-          'type': 'Kontrol',
-          'status': 'Terjadwal',
-          'color': Colors.blue
-        },
-        {
-          'time': '12:00',
-          'pet': 'Bella',
-          'breed': 'Anjing Poodle',
-          'type': 'Konsultasi Online',
-          'status': 'Terjadwal',
-          'color': Colors.blue
-        },
-        {
-          'time': '14:00',
-          'pet': 'Coco',
-          'breed': 'Kucing Maine Coon',
-          'type': 'Kontrol',
-          'status': 'Terjadwal',
-          'color': Colors.blue
-        },
-      ];
-    } else if (date.day % 2 == 0) {
-      return [
-        {
-          'time': '10:00',
-          'pet': 'Max',
-          'breed': 'Kucing Persia',
-          'type': 'Kontrol',
-          'status': 'Terjadwal',
-          'color': Colors.blue
-        },
-        {
-          'time': '14:00',
-          'pet': 'Coco',
-          'breed': 'Kucing Maine Coon',
-          'type': 'Kontrol',
-          'status': 'Terjadwal',
-          'color': Colors.blue
-        },
-      ];
-    } else {
-      return [
-        {
-          'time': '09:00',
-          'pet': 'Milo',
-          'breed': 'Golden Retriever',
-          'type': 'Konsultasi Online',
-          'status': 'Terjadwal',
-          'color': Colors.blue
-        },
-        {
-          'time': '13:00',
-          'pet': 'Luna',
-          'breed': 'Kucing Anggora',
-          'type': 'Konsultasi Online',
-          'status': 'Terjadwal',
-          'color': Colors.blue
-        },
-      ];
-    }
+  String _formatMonthYear(DateTime date) {
+    const months = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    return '${months[date.month - 1]} ${date.year}';
   }
 
-  List<Widget> _getScheduleForDate(
-      BuildContext context, DateTime date, String filter) {
-    var rawData = _getRawDataForDate(date);
-    if (filter != 'Semua') {
-      rawData = rawData
-          .where((item) => (item['type'] as String).contains(filter))
-          .toList();
+  List<Map<String, dynamic>> _getRawDataForDate(DateTime date) {
+    final dateString = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    return _allEvents.where((e) => e['date'] == dateString).toList();
+  }
+
+  void _showDailyDetails(BuildContext context, DateTime date, List<Map<String, dynamic>> rawData) {
+    if (rawData.isEmpty) return;
+
+    Navigator.pushNamed(context, AppRoutes.doctorDailySchedule, arguments: {
+      'date': date,
+      'rawData': rawData,
+    });
+  }
+
+  Widget _buildMonthlyCalendarView(
+      BuildContext context, DateTime monthDate, String filter) {
+    
+    final firstDayOfMonth = DateTime(monthDate.year, monthDate.month, 1);
+    final lastDayOfMonth = DateTime(monthDate.year, monthDate.month + 1, 0);
+
+    int firstWeekday = firstDayOfMonth.weekday; // 1-7 (Mon-Sun)
+    if (firstWeekday == 7) firstWeekday = 0; // Sun=0
+
+    List<DateTime> daysInGrid = [];
+    for (int i = 0; i < firstWeekday; i++) {
+      daysInGrid.add(firstDayOfMonth.subtract(Duration(days: firstWeekday - i)));
+    }
+    for (int i = 1; i <= lastDayOfMonth.day; i++) {
+      daysInGrid.add(DateTime(monthDate.year, monthDate.month, i));
+    }
+    int remainingCells = 42 - daysInGrid.length;
+    for (int i = 1; i <= remainingCells; i++) {
+      daysInGrid.add(lastDayOfMonth.add(Duration(days: i)));
     }
 
-    return rawData
-        .map((data) => _buildScheduleItem(
-            context,
-            data['time'],
-            data['pet'],
-            data['breed'],
-            data['type'],
-            data['status'],
-            data['color'],
-            _formatDate(date)))
-        .toList();
+    final weekdays = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          Row(
+            children: weekdays
+                .map((day) => Expanded(
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text(
+                            day,
+                            style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF7A93AA)),
+                          ),
+                        ),
+                      ),
+                    ))
+                .toList(),
+          ),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              mainAxisExtent: 120, // Fixed height for each cell
+            ),
+                itemCount: 42,
+                itemBuilder: (context, index) {
+                  final date = daysInGrid[index];
+                  final isCurrentMonth = date.month == monthDate.month;
+                  final isToday = date.year == DateTime.now().year &&
+                                  date.month == DateTime.now().month &&
+                                  date.day == DateTime.now().day;
+
+                  var rawData = _getRawDataForDate(date);
+                  if (filter != 'Semua') {
+                    rawData = rawData
+                        .where((item) => (item['type'] as String).contains(filter))
+                        .toList();
+                  }
+
+                  // Group by schedule_id
+                  Map<int, List<Map<String, dynamic>>> groupedData = {};
+                  for (var data in rawData) {
+                    int sId = data['schedule_id'] ?? data.hashCode; // fallback
+                    groupedData.putIfAbsent(sId, () => []).add(data);
+                  }
+
+                  return Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: const Color(0xFFF0F4F8)),
+                      color: isToday ? const Color(0xFFE3F2FD) : Colors.white,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Center(
+                            child: Text(
+                              '${date.day}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: isToday 
+                                    ? Colors.blue 
+                                    : (isCurrentMonth ? const Color(0xFF0F2646) : const Color(0xFFB0C4D9)),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: ListView(
+                            physics: const NeverScrollableScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            children: groupedData.values.take(3).map((scheduleList) {
+                              final data = scheduleList.first;
+                              final isBooked = scheduleList.any((s) => s['pet'] != 'Tersedia');
+                              final bookingCount = isBooked ? scheduleList.where((s) => s['pet'] != 'Tersedia').length : 0;
+                              final isCompleted = isBooked && scheduleList.where((s) => s['pet'] != 'Tersedia').every((s) {
+                                final st = (s['status'] as String?)?.toLowerCase() ?? '';
+                                return st == 'selesai' || st == 'finished' || st == 'completed';
+                              });
+                              
+                              final color = isBooked ? Colors.green : Colors.blue;
+                              final text = isBooked ? '${data['time']} ($bookingCount Pasien)' : '${data['time']} Tersedia';
+
+                              return InkWell(
+                                onTap: isBooked ? () {
+                                  Navigator.pushNamed(context, AppRoutes.doctorDailySchedule, arguments: {
+                                    'date': date,
+                                    'rawData': rawData,
+                                  });
+                                } : () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Hapus Jadwal?'),
+                                      content: Text('Apakah Anda yakin ingin menghapus jadwal pukul ${data['time']}?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(ctx),
+                                          child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+                                        ),
+                                        TextButton(
+                                          onPressed: () async {
+                                            await DatabaseHelper.instance.deleteSchedule(data['id'] as int);
+                                            if (ctx.mounted) Navigator.pop(ctx);
+                                            _loadData();
+                                          },
+                                          child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 2),
+                                  padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: color.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(2),
+                                    border: Border(left: BorderSide(color: color, width: 2))
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          text,
+                                          style: TextStyle(
+                                            fontSize: 8,
+                                            fontWeight: FontWeight.w600,
+                                            color: color.shade800,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          maxLines: 1,
+                                        ),
+                                      ),
+                                      if (isCompleted)
+                                        const Padding(
+                                          padding: EdgeInsets.only(left: 2),
+                                          child: Icon(Icons.check_circle, size: 10, color: Color(0xFF1B5E20)), // Dark green color
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                        if (groupedData.length > 3)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4, top: 2),
+                            child: Text(
+                              '+${groupedData.length - 3} lagi',
+                              style: const TextStyle(fontSize: 9, color: Color(0xFF0F2646), fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       bottomNavigationBar: NavigationBar(
@@ -160,6 +308,7 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
             AppRoutes.doctorHome,
             AppRoutes.doctorPatients,
             AppRoutes.doctorSchedule,
+            AppRoutes.doctorConsultations,
             AppRoutes.doctorSettings
           ][i];
           if (ModalRoute.of(context)?.settings.name != route) {
@@ -179,6 +328,10 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
               icon: Icon(Icons.calendar_month_outlined),
               selectedIcon: Icon(Icons.calendar_month),
               label: 'Jadwal'),
+          NavigationDestination(
+              icon: Icon(Icons.chat_bubble_outline),
+              selectedIcon: Icon(Icons.chat_bubble),
+              label: 'Konsultasi'),
           NavigationDestination(
               icon: Icon(Icons.person_outline),
               selectedIcon: Icon(Icons.person),
@@ -210,21 +363,40 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
                     onPressed: () {
                       setState(() {
                         _selectedDate =
-                            _selectedDate.subtract(const Duration(days: 1));
+                            DateTime(_selectedDate.year, _selectedDate.month - 1, 1);
                       });
                     },
                   ),
-                  Row(
-                    children: [
-                      Text(_formatDate(_selectedDate),
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Color(0xFF0F2646))),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.calendar_month,
-                          color: Color(0xFF7A93AA), size: 20),
-                    ],
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _selectedDate,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null && picked != _selectedDate) {
+                        setState(() {
+                          _selectedDate = picked;
+                        });
+                      }
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: Row(
+                        children: [
+                          Text(_formatMonthYear(_selectedDate),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Color(0xFF0F2646))),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.calendar_month,
+                              color: Color(0xFF7A93AA), size: 20),
+                        ],
+                      ),
+                    ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.chevron_right,
@@ -232,7 +404,7 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
                     onPressed: () {
                       setState(() {
                         _selectedDate =
-                            _selectedDate.add(const Duration(days: 1));
+                            DateTime(_selectedDate.year, _selectedDate.month + 1, 1);
                       });
                     },
                   ),
@@ -276,21 +448,9 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
                     Expanded(
                       child: TabBarView(
                         children: [
-                          ListView(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            children: _getScheduleForDate(
-                                context, _selectedDate, 'Semua'),
-                          ),
-                          ListView(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            children: _getScheduleForDate(
-                                context, _selectedDate, 'Konsultasi'),
-                          ),
-                          ListView(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            children: _getScheduleForDate(
-                                context, _selectedDate, 'Kontrol'),
-                          ),
+                          _buildMonthlyCalendarView(context, _selectedDate, 'Semua'),
+                          _buildMonthlyCalendarView(context, _selectedDate, 'Konsultasi'),
+                          _buildMonthlyCalendarView(context, _selectedDate, 'Kontrol'),
                         ],
                       ),
                     ),
@@ -303,7 +463,12 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
             Padding(
               padding: const EdgeInsets.all(24),
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () async {
+                  final result = await Navigator.pushNamed(context, AppRoutes.doctorAddSchedule);
+                  if (result == true) {
+                    _loadData();
+                  }
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2196F3),
                   minimumSize: const Size(double.infinity, 50),
@@ -323,107 +488,23 @@ class _DoctorScheduleScreenState extends State<DoctorScheduleScreen> {
       ),
     );
   }
-
-  Widget _buildScheduleItem(
-      BuildContext context,
-      String time,
-      String petName,
-      String breed,
-      String type,
-      String status,
-      MaterialColor color,
-      String formattedDate) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFF0F4F8)),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 4,
-                offset: const Offset(0, 2)),
-          ]),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            if (status.toLowerCase() == 'berlangsung') {
-              Navigator.pushNamed(context, AppRoutes.consultationRoom,
-                  arguments: {'consultation_id': 1}); // mock id for now
-            } else {
-              Navigator.pushNamed(context, AppRoutes.doctorAppointmentDetail,
-                  arguments: formattedDate);
-            }
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 50,
-              child: Text(time,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w600, color: Color(0xFF0F2646))),
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(petName,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                              color: Color(0xFF0F2646))),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: color.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(status,
-                            style: TextStyle(
-                                color: color.shade700,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ),
-                  Text(breed,
-                      style: const TextStyle(
-                          fontSize: 12, color: Color(0xFF7A93AA))),
-                  const SizedBox(height: 8),
-                  Text(type,
-                      style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF0F2646))),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      ),
-      ),
-    );
-  }
 }
 
 // ==== MOCKUP 11: DETAIL JADWAL ====
 class DoctorAppointmentDetailScreen extends StatelessWidget {
-  final String dateString;
-  const DoctorAppointmentDetailScreen({super.key, required this.dateString});
+  final Map<String, dynamic> args;
+  const DoctorAppointmentDetailScreen({super.key, required this.args});
 
   @override
   Widget build(BuildContext context) {
+    final dateString = args['date'] as String? ?? '2026-07-31';
+    final event = args['event'] as Map<String, dynamic>? ?? {};
+    final petName = event['pet'] as String? ?? 'Milo';
+    final breed = event['breed'] as String? ?? 'Golden Retriever';
+    final time = event['time'] as String? ?? '09:00';
+    final type = event['type'] as String? ?? 'Konsultasi Online';
+    final status = event['status'] as String? ?? 'Selesai';
+    final isBooked = petName != 'Tersedia';
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -460,14 +541,14 @@ class DoctorAppointmentDetailScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Milo',
-                        style: TextStyle(
+                    Text(petName,
+                        style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w900,
                             color: Color(0xFF0F2646))),
-                    const Text('Golden Retriever',
+                    Text(breed,
                         style:
-                            TextStyle(color: Color(0xFF7A93AA), fontSize: 13)),
+                            const TextStyle(color: Color(0xFF7A93AA), fontSize: 13)),
                   ],
                 ),
               ),
@@ -477,8 +558,8 @@ class DoctorAppointmentDetailScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                     color: Colors.green.shade50,
                     borderRadius: BorderRadius.circular(8)),
-                child: const Text('Konsultasi Online',
-                    style: TextStyle(
+                child: Text(type,
+                    style: const TextStyle(
                         color: Colors.green,
                         fontSize: 11,
                         fontWeight: FontWeight.bold)),
@@ -496,9 +577,9 @@ class DoctorAppointmentDetailScreen extends StatelessWidget {
           const SizedBox(height: 16),
           _buildInfoRow(Icons.calendar_month_outlined, dateString),
           const SizedBox(height: 12),
-          _buildInfoRow(Icons.access_time, '09:00 - 09:30 WIB'),
+          _buildInfoRow(Icons.access_time, '$time WIB'),
           const SizedBox(height: 12),
-          _buildInfoRow(Icons.description_outlined, 'Konsultasi Online'),
+          _buildInfoRow(Icons.description_outlined, type),
           const SizedBox(height: 32),
 
           // KELUHAN UTAMA

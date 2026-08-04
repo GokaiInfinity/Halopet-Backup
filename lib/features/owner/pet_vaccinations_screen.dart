@@ -57,9 +57,11 @@ class _PetVaccinationsScreenState extends State<PetVaccinationsScreen> {
     );
   }
 
-  void _showAddForm(BuildContext context) {
+  void _showAddForm(BuildContext ctx) {
     final nameController = TextEditingController();
     final dateController = TextEditingController();
+    final brandController = TextEditingController();
+    final batchController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
@@ -116,6 +118,24 @@ class _PetVaccinationsScreenState extends State<PetVaccinationsScreen> {
                       borderRadius: BorderRadius.circular(12)),
                 ),
               ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: brandController,
+                decoration: InputDecoration(
+                  labelText: 'Merek Vaksin (opsional)',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: batchController,
+                decoration: InputDecoration(
+                  labelText: 'Nomor Batch (opsional)',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () async {
@@ -125,6 +145,8 @@ class _PetVaccinationsScreenState extends State<PetVaccinationsScreen> {
                       'pet_id': widget.pet['id'],
                       'name': nameController.text,
                       'date': dateController.text,
+                      'brand': brandController.text,
+                      'batch_number': batchController.text,
                       'status': 'Aktif',
                     };
                     await context.read<PetProvider>().saveVaccination(data);
@@ -238,6 +260,32 @@ class _PetVaccinationsScreenState extends State<PetVaccinationsScreen> {
                       const TextStyle(color: Color(0xFF7A93AA), fontSize: 12)),
             ],
           ),
+          if (vaccination['brand'] != null && vaccination['brand'].toString().isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.label_outline,
+                    size: 14, color: Color(0xFF7A93AA)),
+                const SizedBox(width: 6),
+                Text('Merek: ${vaccination['brand']}',
+                    style:
+                        const TextStyle(color: Color(0xFF7A93AA), fontSize: 12)),
+              ],
+            ),
+          ],
+          if (vaccination['batch_number'] != null && vaccination['batch_number'].toString().isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.confirmation_number_outlined,
+                    size: 14, color: Color(0xFF7A93AA)),
+                const SizedBox(width: 6),
+                Text('Batch: ${vaccination['batch_number']}',
+                    style:
+                        const TextStyle(color: Color(0xFF7A93AA), fontSize: 12)),
+              ],
+            ),
+          ],
         ],
       ),
     );

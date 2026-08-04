@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../features/admin/admin_screens.dart';
 import '../features/auth/auth_screens.dart';
@@ -9,6 +10,7 @@ import '../features/owner/pet_diseases_screen.dart';
 import '../features/owner/pet_vaccinations_screen.dart';
 import '../features/owner/pet_add_wizard_screen.dart';
 import '../features/owner/screens/emergency_clinic_screen.dart';
+import '../features/owner/screens/notification_settings_screen.dart';
 import '../features/owner/consultation_wizard_screen.dart';
 import '../features/owner/monitoring_log_screen.dart';
 import '../features/owner/telemedicine_result_screens.dart';
@@ -17,9 +19,14 @@ import '../features/owner/telemedicine_flow_screens.dart';
 import '../features/owner/review_form_screen.dart';
 import '../features/owner/help_center_screen.dart';
 import '../features/profile/screens/edit_profile_screen.dart';
+import '../features/doctor/doctor_notification_settings_screen.dart';
+import '../features/doctor/doctor_daily_schedule_screen.dart';
+import '../features/doctor/doctor_add_schedule_screen.dart';
 import '../features/admin/admin_inventory_screens.dart';
 import '../features/admin/admin_consultations_screen.dart';
+import '../features/admin/admin_filtered_list_screens.dart';
 import '../features/admin/admin_tickets_screen.dart';
+import '../features/admin/admin_notification_settings_screen.dart';
 import '../core/widgets/common_widgets.dart';
 import 'routes.dart';
 import 'theme.dart';
@@ -33,9 +40,23 @@ class HaloPetApp extends StatelessWidget {
       title: 'HaloPet',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('id', 'ID'), // Indonesian
+        Locale('en', 'US'), // English (fallback)
+      ],
+      locale: const Locale('id', 'ID'),
       initialRoute: AppRoutes.splash,
       onGenerateRoute: (settings) {
         final args = settings.arguments;
+        
+        MaterialPageRoute<void> _page(Widget child) =>
+            MaterialPageRoute(builder: (_) => child, settings: settings);
+
         switch (settings.name) {
           case AppRoutes.splash:
             return _page(const SplashScreen());
@@ -50,9 +71,18 @@ class HaloPetApp extends StatelessWidget {
           case AppRoutes.forgot:
             return _page(const ForgotPasswordScreen());
           case AppRoutes.otp:
-            final emailArgs = args is String ? args : (args as Map<String, dynamic>?)?['email'] as String? ?? '';
+            final argsMap = args as Map<String, dynamic>?;
+            final emailArgs = argsMap?['email'] as String? ?? '';
+            final phoneArgs = argsMap?['phone'] as String? ?? '';
+            final sentOtpArgs = argsMap?['sentOtp'] as String? ?? '';
+            final nameArgs = argsMap?['name'] as String? ?? '';
+            final passwordArgs = argsMap?['password'] as String? ?? '';
             return _page(OtpScreen(
               email: emailArgs,
+              phone: phoneArgs,
+              sentOtp: sentOtpArgs,
+              name: nameArgs,
+              password: passwordArgs,
             ));
           case AppRoutes.resetPassword:
             return _page(const ResetPasswordScreen());
@@ -92,6 +122,18 @@ class HaloPetApp extends StatelessWidget {
             return _page(EmergencyClinicScreen(args: args as Map<String, dynamic>));
           case AppRoutes.payment:
             return _page(PaymentScreen(args: args as Map<String, dynamic>));
+          case AppRoutes.paymentSuccess:
+            return _page(PaymentSuccessScreen(args: args as Map<String, dynamic>));
+
+          case AppRoutes.medicineCheckout:
+            return _page(
+                MedicineCheckoutScreen(args: args as Map<String, dynamic>));
+          case AppRoutes.medicinePayment:
+            return _page(
+                MedicinePaymentScreen(args: args as Map<String, dynamic>));
+          case AppRoutes.medicineTracker:
+            return _page(
+                MedicineTrackerScreen(args: args as Map<String, dynamic>));
           case AppRoutes.consultationPrep:
             return _page(
                 ConsultationPrepScreen(args: args as Map<String, dynamic>));
@@ -132,6 +174,8 @@ class HaloPetApp extends StatelessWidget {
             return _page(const OwnerProfileScreen());
           case AppRoutes.editProfile:
             return _page(const EditProfileScreen());
+          case AppRoutes.notificationSettings:
+            return _page(const NotificationSettingsScreen());
           case AppRoutes.doctorHome:
             return _page(const DoctorDashboardScreen());
           case AppRoutes.doctorNotifications:
@@ -141,13 +185,13 @@ class HaloPetApp extends StatelessWidget {
           case AppRoutes.doctorConsultations:
             return _page(const DoctorConsultationsScreen());
           case AppRoutes.doctorAppointmentDetail:
-            final dateString = args as String?;
             return _page(DoctorAppointmentDetailScreen(
-                dateString: dateString ?? 'Selasa, 20 Mei 2025'));
+                args: settings.arguments as Map<String, dynamic>));
           case AppRoutes.doctorPatients:
             return _page(const DoctorPatientListScreen());
           case AppRoutes.doctorPatientDetail:
-            return _page(const DoctorPatientDetailScreen());
+            final args = settings.arguments as Map<String, dynamic>? ?? {};
+            return _page(DoctorPatientDetailScreen(patient: args));
           case AppRoutes.doctorMedicalHistory:
             return _page(const DoctorMedicalHistoryScreen());
           case AppRoutes.doctorMedicalNotes:
@@ -164,6 +208,16 @@ class HaloPetApp extends StatelessWidget {
                 const DoctorProfileScreen()); // Note: using DoctorProfileScreen for detail as well since mockup 17 is both Profile & Detail based on standard use
           case AppRoutes.doctorSettings:
             return _page(const DoctorSettingsScreen());
+          case AppRoutes.doctorNotificationSettings:
+            return _page(const DoctorNotificationSettingsScreen());
+          case AppRoutes.doctorDailySchedule:
+            final args = settings.arguments as Map<String, dynamic>;
+            return _page(DoctorDailyScheduleScreen(
+              date: args['date'] as DateTime,
+              rawData: args['rawData'] as List<Map<String, dynamic>>,
+            ));
+          case AppRoutes.doctorAddSchedule:
+            return _page(const DoctorAddScheduleScreen());
           case AppRoutes.doctorSupport:
             return _page(const DoctorSupportScreen());
           case AppRoutes.adminHome:
@@ -172,10 +226,14 @@ class HaloPetApp extends StatelessWidget {
             return _page(const AdminNotificationScreen());
           case AppRoutes.adminPatients:
             return _page(const AdminPatientManagementScreen());
+          case AppRoutes.adminFilteredPatients:
+            return _page(const AdminFilteredPatientsScreen());
           case AppRoutes.adminPatientDetail:
             return _page(const AdminPatientDetailScreen());
           case AppRoutes.adminDoctors:
             return _page(const AdminDoctorManagementScreen());
+          case AppRoutes.adminFilteredDoctors:
+            return _page(const AdminFilteredDoctorsScreen());
           case AppRoutes.adminAddDoctor:
             return _page(const AdminAddDoctorScreen());
           case AppRoutes.adminServices:
@@ -188,14 +246,24 @@ class HaloPetApp extends StatelessWidget {
             return _page(const AdminAddMedicineScreen());
           case AppRoutes.adminTransactions:
             return _page(const AdminTransactionScreen());
+          case AppRoutes.adminFilteredTransactions:
+            return _page(const AdminFilteredTransactionsScreen());
           case AppRoutes.adminReports:
             return _page(const AdminReportScreen());
           case AppRoutes.adminConsultations:
-            return _page(const AdminConsultationsScreen());
+            final dateArgs = args as Map<String, dynamic>?;
+            return _page(AdminConsultationsScreen(
+              startDate: dateArgs?['startDate'] as DateTime?,
+              endDate: dateArgs?['endDate'] as DateTime?,
+            ));
+          case AppRoutes.adminIntegration:
+            return _page(const AdminIntegrationScreen());
           case AppRoutes.adminTickets:
             return _page(const AdminTicketsScreen());
           case AppRoutes.adminSettings:
             return _page(const AdminSettingsScreen());
+          case AppRoutes.adminNotificationSettings:
+            return _page(const AdminNotificationSettingsScreen());
           case AppRoutes.adminUsers:
             return _page(const AdminUserAccessScreen());
           default:
@@ -204,7 +272,4 @@ class HaloPetApp extends StatelessWidget {
       },
     );
   }
-
-  MaterialPageRoute<void> _page(Widget child) =>
-      MaterialPageRoute(builder: (_) => child);
 }

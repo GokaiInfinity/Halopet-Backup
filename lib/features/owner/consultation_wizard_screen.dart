@@ -29,7 +29,7 @@ final Map<String, Map<String, List<ConsultationQuestion>>> serviceConfig = {
       ConsultationQuestion(key: 'sejak_kapan', question: 'Sejak kapan keluhan muncul?', type: QuestionType.radio, options: ['Kurang dari 24 jam', '1 - 3 hari', 'Lebih dari 3 hari']),
       ConsultationQuestion(key: 'muncul_tiba_tiba', question: 'Apakah keluhan muncul tiba-tiba atau bertahap?', type: QuestionType.radio, options: ['Tiba-tiba', 'Bertahap']),
       ConsultationQuestion(key: 'masih_makan', question: 'Apakah hewan masih mau makan?', type: QuestionType.yesNo),
-      ConsultationQuestion(key: 'masih_minum', question: 'Apakah hewan masih mau minum?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'water_intake', question: 'Bagaimana nafsu minum hewan?', type: QuestionType.radio, options: ['Normal', 'Banyak Sekali (Polydipsia)', 'Tidak Mau Minum']),
       ConsultationQuestion(key: 'terlihat_lemas', question: 'Apakah hewan terlihat lemas?', type: QuestionType.yesNo),
       ConsultationQuestion(key: 'mengalami_muntah', question: 'Apakah hewan mengalami muntah?', type: QuestionType.yesNo),
       ConsultationQuestion(key: 'mengalami_diare', question: 'Apakah hewan mengalami diare?', type: QuestionType.yesNo),
@@ -48,11 +48,16 @@ final Map<String, Map<String, List<ConsultationQuestion>>> serviceConfig = {
     ],
     'Darurat': [
       ConsultationQuestion(key: 'sulit_bernapas', question: 'Apakah hewan sulit bernapas?', type: QuestionType.yesNo),
-      ConsultationQuestion(key: 'kejang', question: 'Apakah hewan kejang?', type: QuestionType.yesNo),
-      ConsultationQuestion(key: 'tidak_sadar', question: 'Apakah hewan tidak sadar atau sangat lemas?', type: QuestionType.yesNo),
-      ConsultationQuestion(key: 'muntah_diare_berdarah', question: 'Apakah ada muntah/diare berdarah?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'batuk_sesak', question: 'Apakah hewan batuk terus-menerus sampai tampak sesak?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'sangat_lemas', question: 'Apakah hewan tampak sangat lemas?', type: QuestionType.yesNo),
       ConsultationQuestion(key: 'tidak_bisa_berdiri', question: 'Apakah hewan tidak bisa berdiri?', type: QuestionType.yesNo),
-      ConsultationQuestion(key: 'tidak_buang_air_kecil', question: 'Apakah hewan tidak buang air kecil lebih dari 24 jam?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'kejang', question: 'Apakah hewan kejang?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'tidak_sadar', question: 'Apakah hewan tidak sadar atau tidak merespons?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'suhu_sangat_panas', question: 'Apakah suhu tubuh terasa sangat panas?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'mucous_membrane', question: 'Angkat bibir hewan. Apa warna gusinya?', type: QuestionType.radio, options: ['Merah Muda (Normal)', 'Pucat / Putih', 'Biru (Sianosis)', 'Kuning (Jaundice)']),
+      ConsultationQuestion(key: 'crt', question: 'Tekan gusi selama 2 detik. Berapa lama warnanya kembali merah muda?', type: QuestionType.radio, options: ['Kurang dari 2 detik (Normal)', 'Lebih dari 2 detik (Abnormal)']),
+      ConsultationQuestion(key: 'tidak_makan_minum', question: 'Apakah hewan tidak mau makan dan minum sama sekali?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'perdarahan', question: 'Apakah ada perdarahan dari mulut, hidung, anus, atau urine?', type: QuestionType.yesNo),
     ]
   },
   'Kulit dan Bulu': {
@@ -82,7 +87,18 @@ final Map<String, Map<String, List<ConsultationQuestion>>> serviceConfig = {
       ConsultationQuestion(key: 'pemilik_gatal', question: 'Apakah pemilik atau anggota rumah juga mengalami gatal?', type: QuestionType.yesNo),
       ConsultationQuestion(key: 'bermain_di_luar', question: 'Apakah hewan sering bermain di luar rumah?', type: QuestionType.yesNo),
     ],
-    'Darurat': []
+    'Darurat': [
+      ConsultationQuestion(key: 'luka_terbuka_besar', question: 'Apakah ada luka terbuka yang besar?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'darah_terus_menerus', question: 'Apakah darah keluar terus-menerus?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'bengkak_cepat', question: 'Apakah ada bengkak cepat pada wajah, mata, mulut, atau leher?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'sulit_napas_alergi', question: 'Apakah hewan sulit bernapas setelah gigitan serangga, makanan, obat, atau vaksin?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'nanah_bau', question: 'Apakah ada nanah atau bau busuk dari luka?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'kulit_melepuh', question: 'Apakah kulit tampak melepuh atau terbakar?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'gigitan_hewan', question: 'Apakah luka terjadi akibat gigitan hewan lain?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'sangat_kesakitan', question: 'Apakah hewan tampak sangat kesakitan saat disentuh?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'jilat_sampai_berdarah', question: 'Apakah hewan terus menjilat luka sampai berdarah?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'disertai_demam_lemas', question: 'Apakah keluhan kulit disertai demam, lemas, atau tidak mau makan?', type: QuestionType.yesNo),
+    ]
   },
   'Pencernaan': {
     'Wajib': [
@@ -97,7 +113,7 @@ final Map<String, Map<String, List<ConsultationQuestion>>> serviceConfig = {
       ConsultationQuestion(key: 'bentuk_feses', question: 'Bagaimana bentuk fesesnya?', type: QuestionType.text),
       ConsultationQuestion(key: 'darah_lendir_feses', question: 'Apakah ada darah atau lendir pada feses?', type: QuestionType.yesNo),
       ConsultationQuestion(key: 'masih_makan', question: 'Apakah hewan masih mau makan?', type: QuestionType.yesNo),
-      ConsultationQuestion(key: 'masih_minum', question: 'Apakah hewan masih mau minum?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'water_intake', question: 'Bagaimana nafsu minum hewan?', type: QuestionType.radio, options: ['Normal', 'Banyak Sekali (Polydipsia)', 'Tidak Mau Minum']),
       ConsultationQuestion(key: 'tampak_lemas', question: 'Apakah hewan tampak lemas?', type: QuestionType.yesNo),
       ConsultationQuestion(key: 'perut_kembung_sakit', question: 'Apakah perut terlihat kembung atau sakit saat disentuh?', type: QuestionType.yesNo),
       ConsultationQuestion(key: 'buang_air_kecil_normal', question: 'Apakah hewan masih buang air kecil normal?', type: QuestionType.yesNo),
@@ -115,19 +131,22 @@ final Map<String, Map<String, List<ConsultationQuestion>>> serviceConfig = {
       ConsultationQuestion(key: 'hewan_lain_sama', question: 'Apakah ada hewan lain di rumah yang mengalami keluhan sama?', type: QuestionType.yesNo),
     ],
     'Darurat': [
-      ConsultationQuestion(key: 'muntah_terus_menerus', question: 'Apakah muntah terus-menerus?', type: QuestionType.yesNo),
-      ConsultationQuestion(key: 'diare_berdarah', question: 'Apakah diare berdarah?', type: QuestionType.yesNo),
-      ConsultationQuestion(key: 'tidak_makan_24_jam', question: 'Apakah hewan tidak mau makan sama sekali lebih dari 24 jam?', type: QuestionType.yesNo),
-      ConsultationQuestion(key: 'sangat_lemas', question: 'Apakah hewan sangat lemas?', type: QuestionType.yesNo),
-      ConsultationQuestion(key: 'perut_membesar_kembung', question: 'Apakah perut membesar/kembung?', type: QuestionType.yesNo),
-      ConsultationQuestion(key: 'kesakitan_hebat', question: 'Apakah hewan tampak kesakitan hebat?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'muntah_terus_menerus', question: 'Apakah hewan muntah terus-menerus?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'muntah_lebih_3_kali', question: 'Apakah hewan muntah lebih dari 3 kali dalam 24 jam?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'muntah_darah', question: 'Apakah muntah mengandung darah?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'diare_darah', question: 'Apakah diare mengandung darah?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'feses_hitam_cair', question: 'Apakah feses berwarna hitam pekat atau sangat cair terus-menerus?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'tidak_mau_minum', question: 'Apakah hewan tidak mau minum?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'sangat_lemas', question: 'Apakah hewan tampak sangat lemas?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'perut_membesar_kembung', question: 'Apakah perut tampak membesar atau kembung?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'kesakitan_disentuh', question: 'Apakah hewan tampak kesakitan saat perut disentuh?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'telan_benda_asing', question: 'Apakah hewan diduga menelan benda asing seperti plastik, kain, tulang, benang, mainan, atau racun?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'mucous_membrane', question: 'Angkat bibir hewan. Apa warna gusinya?', type: QuestionType.radio, options: ['Merah Muda (Normal)', 'Pucat / Putih', 'Biru (Sianosis)', 'Kuning (Jaundice)']),
+      ConsultationQuestion(key: 'crt', question: 'Tekan gusi selama 2 detik. Berapa lama warnanya kembali merah muda?', type: QuestionType.radio, options: ['Kurang dari 2 detik (Normal)', 'Lebih dari 2 detik (Abnormal)']),
     ]
   },
   'Nutrisi': {
     'Wajib': [
-      ConsultationQuestion(key: 'jenis_hewan', question: 'Jenis hewan apa?', type: QuestionType.text),
-      ConsultationQuestion(key: 'usia_hewan', question: 'Usia hewan berapa?', type: QuestionType.text),
-      ConsultationQuestion(key: 'berat_badan', question: 'Berat badan hewan saat ini?', type: QuestionType.text),
       ConsultationQuestion(key: 'tren_berat_badan', question: 'Apakah berat badan naik, turun, atau stabil?', type: QuestionType.radio, options: ['Naik', 'Turun', 'Stabil']),
       ConsultationQuestion(key: 'makanan_utama', question: 'Makanan utama yang diberikan saat ini apa?', type: QuestionType.text),
       ConsultationQuestion(key: 'merek_makanan', question: 'Merek makanan yang digunakan?', type: QuestionType.text),
@@ -152,12 +171,23 @@ final Map<String, Map<String, List<ConsultationQuestion>>> serviceConfig = {
       ConsultationQuestion(key: 'preferensi_makanan', question: 'Apakah pemilik ingin makanan kering, basah, homemade, atau kombinasi?', type: QuestionType.text),
       ConsultationQuestion(key: 'batasan_budget', question: 'Apakah ada batasan budget makanan?', type: QuestionType.yesNo),
     ],
-    'Darurat': []
+    'Darurat': [
+      ConsultationQuestion(key: 'tidak_makan_24_jam', question: 'Apakah hewan tidak mau makan sama sekali lebih dari 24 jam?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'tidak_mau_minum', question: 'Apakah hewan tidak mau minum?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'muntah_setiap_makan', question: 'Apakah hewan muntah setiap kali makan atau minum?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'diare_berdarah_nutrisi', question: 'Apakah hewan diare berdarah?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'berat_badan_turun_drastis', question: 'Apakah berat badan turun drastis dalam waktu singkat?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'sangat_lemas_nutrisi', question: 'Apakah hewan tampak sangat lemas?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'diduga_makan_racun', question: 'Apakah hewan diduga makan makanan beracun seperti cokelat, bawang, obat manusia, racun tikus, atau bahan kimia?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'perut_membesar_kembung_nutrisi', question: 'Apakah perut hewan tampak membesar/kembung?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'hamil_tidak_makan', question: 'Apakah hewan sedang hamil/menyusui dan tidak mau makan?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'anak_tidak_menyusu', question: 'Apakah anak hewan tidak mau menyusu atau tampak lemah?', type: QuestionType.yesNo),
+    ]
   },
   'Perilaku': {
     'Wajib': [
       ConsultationQuestion(key: 'keluhan_perilaku', question: 'Perilaku apa yang menjadi keluhan utama?', type: QuestionType.text),
-      ConsultationQuestion(key: 'sejak_kapan', question: 'Sejak kapan perilaku tersebut muncul?', type: QuestionType.text),
+      ConsultationQuestion(key: 'sejak_kapan', question: 'Sejak kapan perilaku tersebut muncul?', type: QuestionType.radio, options: ['Kurang dari 24 jam', '1 - 3 hari', 'Lebih dari 3 hari']),
       ConsultationQuestion(key: 'tiba_tiba_atau_lama', question: 'Apakah perilaku muncul tiba-tiba atau sudah lama?', type: QuestionType.radio, options: ['Tiba-tiba', 'Sudah lama']),
       ConsultationQuestion(key: 'perubahan_lingkungan', question: 'Apakah ada perubahan lingkungan?', type: QuestionType.yesNo),
       ConsultationQuestion(key: 'pindah_rumah', question: 'Apakah baru pindah rumah?', type: QuestionType.yesNo),
@@ -168,7 +198,7 @@ final Map<String, Map<String, List<ConsultationQuestion>>> serviceConfig = {
       ConsultationQuestion(key: 'tampak_kesakitan', question: 'Apakah hewan tampak kesakitan?', type: QuestionType.yesNo),
       ConsultationQuestion(key: 'menjadi_agresif', question: 'Apakah hewan menjadi agresif?', type: QuestionType.yesNo),
       ConsultationQuestion(key: 'pernah_menggigit', question: 'Apakah hewan pernah menggigit atau mencakar?', type: QuestionType.yesNo),
-      ConsultationQuestion(key: 'target_agresif', question: 'Apakah agresif terjadi kepada manusia atau hewan lain?', type: QuestionType.radio, options: ['Manusia', 'Hewan lain', 'Keduanya']),
+      ConsultationQuestion(key: 'target_agresif', question: 'Apakah agresif terjadi kepada manusia atau hewan lain?', type: QuestionType.radio, options: ['Manusia', 'Hewan lain', 'Keduanya', 'Tidak agresif sama sekali']),
       ConsultationQuestion(key: 'sering_bersembunyi', question: 'Apakah hewan sering bersembunyi?', type: QuestionType.yesNo),
       ConsultationQuestion(key: 'vokal_berlebihan', question: 'Apakah hewan sering mengeong/menggonggong berlebihan?', type: QuestionType.yesNo),
       ConsultationQuestion(key: 'buang_air_sembarangan', question: 'Apakah hewan buang air sembarangan?', type: QuestionType.yesNo),
@@ -185,13 +215,21 @@ final Map<String, Map<String, List<ConsultationQuestion>>> serviceConfig = {
       ConsultationQuestion(key: 'punya_mainan_area', question: 'Apakah hewan memiliki mainan atau area khusus?', type: QuestionType.yesNo),
       ConsultationQuestion(key: 'pelatihan_tertentu', question: 'Apakah pemilik pernah mencoba pelatihan tertentu?', type: QuestionType.yesNo),
     ],
-    'Darurat': []
+    'Darurat': [
+      ConsultationQuestion(key: 'berubah_tiba_tiba', question: 'Apakah perubahan perilaku terjadi tiba-tiba?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'agresif_mendadak', question: 'Apakah hewan mendadak agresif tanpa sebab jelas?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'serang_manusia_hewan', question: 'Apakah hewan menggigit atau menyerang manusia/hewan lain?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'kesakitan_disentuh_perilaku', question: 'Apakah hewan tampak kesakitan saat disentuh?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'jalan_sempoyongan', question: 'Apakah hewan berjalan sempoyongan?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'kejang_tremor', question: 'Apakah hewan kejang atau tremor?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'bingung_menabrak', question: 'Apakah hewan tampak bingung, berputar-putar, atau menabrak benda?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'baru_trauma', question: 'Apakah hewan baru saja jatuh, tertabrak, atau mengalami trauma?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'diduga_telan_racun_perilaku', question: 'Apakah hewan diduga menelan racun atau obat?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'tidak_bisa_berdiri_lumpuh', question: 'Apakah hewan tidak bisa berdiri atau tampak lumpuh?', type: QuestionType.yesNo),
+    ]
   },
   'Vaksinasi': {
     'Wajib': [
-      ConsultationQuestion(key: 'jenis_hewan', question: 'Jenis hewan apa?', type: QuestionType.text),
-      ConsultationQuestion(key: 'usia_hewan', question: 'Usia hewan berapa?', type: QuestionType.text),
-      ConsultationQuestion(key: 'berat_badan', question: 'Berat badan hewan berapa?', type: QuestionType.text),
       ConsultationQuestion(key: 'kondisi_sehat', question: 'Apakah hewan dalam kondisi sehat?', type: QuestionType.yesNo),
       ConsultationQuestion(key: 'gejala_sakit', question: 'Apakah ada demam, muntah, diare, batuk, atau lemas?', type: QuestionType.yesNo),
       ConsultationQuestion(key: 'pernah_divaksin', question: 'Apakah hewan sudah pernah divaksin?', type: QuestionType.yesNo),
@@ -214,7 +252,18 @@ final Map<String, Map<String, List<ConsultationQuestion>>> serviceConfig = {
       ConsultationQuestion(key: 'rencana_perjalanan', question: 'Apakah ada rencana perjalanan luar kota?', type: QuestionType.yesNo),
       ConsultationQuestion(key: 'syarat_vaksin_penitipan', question: 'Apakah ada syarat vaksin dari tempat penitipan/grooming?', type: QuestionType.yesNo),
     ],
-    'Darurat': []
+    'Darurat': [
+      ConsultationQuestion(key: 'baru_divaksin_24_jam', question: 'Apakah hewan baru divaksin dalam 24 jam terakhir?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'bengkak_wajah_setelah_vaksin', question: 'Apakah setelah vaksin hewan mengalami bengkak pada wajah, mata, mulut, atau leher?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'sulit_bernapas_setelah_vaksin', question: 'Apakah hewan sulit bernapas setelah vaksin?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'muntah_berulang_setelah_vaksin', question: 'Apakah hewan muntah berulang setelah vaksin?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'diare_berat_setelah_vaksin', question: 'Apakah hewan diare berat setelah vaksin?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'sangat_lemas_setelah_vaksin', question: 'Apakah hewan tampak sangat lemas setelah vaksin?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'pingsan_kolaps', question: 'Apakah hewan pingsan atau kolaps?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'bentol_gatal_hebat', question: 'Apakah muncul bentol-bentol atau gatal hebat di seluruh tubuh?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'pernah_reaksi_vaksin', question: 'Apakah hewan pernah mengalami reaksi vaksin sebelumnya?', type: QuestionType.yesNo),
+      ConsultationQuestion(key: 'sedang_sakit_sebelum_vaksin', question: 'Apakah saat ini hewan sedang demam, batuk, muntah, diare, atau lemas sebelum vaksin?', type: QuestionType.yesNo),
+    ]
   },
 };
 
@@ -238,6 +287,9 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> wit
   // Dynamic form answers
   Map<String, dynamic> formAnswers = {};
   
+  String consultationIntent = '';
+  final TextEditingController _routineReasonController = TextEditingController();
+  
   // Form keys
   final _formKey = GlobalKey<FormState>();
 
@@ -253,6 +305,7 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> wit
 
   @override
   void dispose() {
+    _routineReasonController.dispose();
     _tabController.dispose();
     _pageController.dispose();
     super.dispose();
@@ -272,7 +325,19 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> wit
         return;
       }
     }
-    if (_currentPage == 1 && selectedService == null) {
+    
+    if (_currentPage == 1 && consultationIntent.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pilih tujuan konsultasi.')));
+      return;
+    }
+
+    if (_currentPage == 1 && consultationIntent == 'Kontrol') {
+      Navigator.pushNamed(context, AppRoutes.doctorList);
+      return;
+    }
+
+    if (_currentPage == 3 && selectedService == null) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Pilih layanan terlebih dahulu.')));
       return;
@@ -283,7 +348,7 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> wit
   }
 
   void _prev() {
-    if (_currentPage == 4 && _tabController.index > 0) {
+    if (_currentPage == 6 && _tabController.index > 0) {
       _tabController.animateTo(_tabController.index - 1);
       return;
     }
@@ -293,8 +358,8 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> wit
 
   int get _currentStep {
     if (_currentPage == 0) return 0; // Hewan
-    if (_currentPage >= 1 && _currentPage <= 3) return 1; // Layanan
-    if (_currentPage == 4) return 2; // Kuesioner
+    if (_currentPage >= 1 && _currentPage <= 5) return 1; // Layanan
+    if (_currentPage == 6) return 2; // Kuesioner
     return 3; // Selesai
   }
 
@@ -325,12 +390,14 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> wit
               onPageChanged: (idx) => setState(() => _currentPage = idx),
               children: [
                 _buildPilihHewan(), // 0
-                _buildPilihLayanan(), // 1
-                _buildDetailLayanan(), // 2
-                _buildInfoBatas(), // 3
-                _buildKuesionerMedis(), // 4
-                _buildRingkasan(), // 5
-                _buildHasilSkrining(), // 6
+                _buildTujuanKonsultasi(), // 1
+                _buildRedFlagCheck(), // 2
+                _buildPilihLayanan(), // 3
+                _buildDetailLayanan(), // 4
+                _buildInfoBatas(), // 5
+                _buildKuesionerMedis(), // 6
+                _buildRingkasan(), // 7
+                _buildHasilSkrining(), // 8
               ],
             ),
           ),
@@ -524,7 +591,214 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> wit
     });
   }
 
-// ==== STEP 1: PILIH LAYANAN ====
+
+  // ==== STEP 1: TUJUAN KONSULTASI ====
+  Widget _buildTujuanKonsultasi() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Apa tujuan konsultasi Anda hari ini?',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0F2646),
+              ),
+            ),
+          ),
+          RadioListTile<String>(
+            title: const Text('Keluhan Medis / Sakit', style: TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: const Text('Hewan menunjukkan gejala sakit, butuh diagnosis dan pengobatan.'),
+            value: 'Sakit',
+            groupValue: consultationIntent,
+            activeColor: const Color(0xFF45A5C7),
+            onChanged: (val) => setState(() => consultationIntent = val!),
+          ),
+          RadioListTile<String>(
+            title: const Text('Kontrol Rutin / Non-Medis', style: TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: const Text('Kontrol pasca pengobatan, tanya gizi, grooming, perilaku, dll.'),
+            value: 'Kontrol',
+            groupValue: consultationIntent,
+            activeColor: const Color(0xFF45A5C7),
+            onChanged: (val) => setState(() => consultationIntent = val!),
+          ),
+
+          const SizedBox(height: 32),
+          _buildFooter('Lanjut', _next),
+        ],
+      ),
+    );
+  }
+
+  // ==== STEP 2: PENGECEKAN DARURAT ====
+  Widget _buildRedFlagCheck() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            color: Colors.red.shade50,
+            child: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 40),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    'Pengecekan Darurat (Red Flags)',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red.shade900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Apakah hewan Anda mengalami salah satu dari kondisi darurat di bawah ini?',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              children: [
+                _buildRedFlagItem('Sesak napas, terengah-engah hebat, atau tersedak'),
+                _buildRedFlagItem('Pendarahan parah yang tidak terkendali'),
+                _buildRedFlagItem('Kejang-kejang atau kehilangan kesadaran'),
+                _buildRedFlagItem('Tertabrak kendaraan atau trauma berat (jatuh dari tempat tinggi)'),
+                _buildRedFlagItem('Keracunan zat berbahaya'),
+                _buildRedFlagItem('Gusi tampak sangat pucat atau kebiruan'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: ElevatedButton(
+              onPressed: () {
+                // Show Emergency Alert
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => AlertDialog(
+                    title: const Row(
+                      children: [
+                        Icon(Icons.emergency, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Gawat Darurat', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                    content: const Text(
+                      'Telemedicine tidak disarankan untuk kondisi darurat medis.\n\n'
+                      'Segera bawa hewan Anda ke klinik hewan terdekat atau hubungi UGD hewan sekarang juga untuk mendapatkan pertolongan langsung.',
+                      style: TextStyle(fontSize: 16, height: 1.5),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          Navigator.pushNamedAndRemoveUntil(context, AppRoutes.ownerHome, (r) => false);
+                        },
+                        child: const Text('Batal & Ke Klinik', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                      ),
+                      ElevatedButton(
+                        onPressed: () async {
+                          Navigator.pop(context); // Close dialog
+                          
+                          // Show loading dialog
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (context) => AlertDialog(
+                              content: Row(
+                                children: const [
+                                  CircularProgressIndicator(color: Colors.red),
+                                  SizedBox(width: 16),
+                                  Expanded(child: Text('Mencari Dokter UGD yang sedang siaga...')),
+                                ],
+                              ),
+                            ),
+                          );
+
+                          // Simulate network delay
+                          await Future.delayed(const Duration(seconds: 2));
+
+                          if (context.mounted) {
+                            Navigator.pop(context); // Close loading dialog
+                            // Auto-route to consultation room
+                            Navigator.pushNamed(context, AppRoutes.consultationRoom, arguments: {
+                              'consultation_id': 999, // dummy emergency ID
+                              'chat_title': 'Drh. UGD Siaga',
+                              'chat_subtitle': 'Dokter Jaga 24 Jam',
+                              'is_emergency': true,
+                            });
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade700,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: const Text('Hubungi Dokter UGD Sekarang', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade700,
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('YA, Ada Kondisi Darurat', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: OutlinedButton(
+              onPressed: _next,
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFF45A5C7)),
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('TIDAK ADA, Lanjutkan', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF45A5C7))),
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRedFlagItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.brightness_1, size: 8, color: Colors.red.shade700),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 14, color: Color(0xFF0F2646), height: 1.2),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+// ==== STEP 3: PILIH LAYANAN ====
   Widget _buildPilihLayanan() {
     final layanans = [
       {

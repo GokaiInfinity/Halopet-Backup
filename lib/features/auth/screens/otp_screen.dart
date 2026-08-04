@@ -1,15 +1,32 @@
 import '../auth_utils.dart';
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../app/routes.dart';
 import '../../../app/theme.dart';
 import '../../../core/widgets/common_widgets.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../services/whapi_service.dart';
+import '../../../app/theme.dart';
+import '../../../core/widgets/common_widgets.dart';
+import '../../../providers/auth_provider.dart';
 
 class OtpScreen extends StatefulWidget {
-  const OtpScreen({super.key, required this.email});
   final String email;
+  final String phone;
+  final String sentOtp;
+  final String name;
+  final String password;
+
+  const OtpScreen({
+    super.key, 
+    required this.email,
+    this.phone = '',
+    this.sentOtp = '',
+    this.name = '',
+    this.password = '',
+  });
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -21,9 +38,12 @@ class _OtpScreenState extends State<OtpScreen> {
   Timer? _timer;
   int _secondsRemaining = 60;
 
+  String _currentSentOtp = '';
+
   @override
   void initState() {
     super.initState();
+    _currentSentOtp = widget.sentOtp;
     _startTimer();
   }
 
@@ -75,7 +95,13 @@ class _OtpScreenState extends State<OtpScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new,
               color: Color(0xFF0F2646), size: 20),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              Navigator.pushReplacementNamed(context, AppRoutes.register);
+            }
+          },
         ),
         title: const Text('Verifikasi OTP',
             style: TextStyle(
@@ -102,9 +128,9 @@ class _OtpScreenState extends State<OtpScreen> {
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
                     color: Color(0xFF0F2646))),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
-              'Kode 6 digit telah dikirim ke\nemail ${widget.email.isEmpty ? 'Anda' : widget.email}',
+              'Kode 4 digit telah dikirim ke WhatsApp Anda:\n${widget.phone.isNotEmpty ? widget.phone : widget.email}',
               textAlign: TextAlign.center,
               style: const TextStyle(
                   color: Color(0xFF7A93AA), fontSize: 14, height: 1.5),
@@ -113,10 +139,10 @@ class _OtpScreenState extends State<OtpScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: List.generate(
-                6,
+                4,
                 (index) => Container(
-                  width: 48,
-                  height: 56,
+                  width: 50,
+                  height: 50,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     border: Border.all(
@@ -151,19 +177,64 @@ class _OtpScreenState extends State<OtpScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            Text(
-              _secondsRemaining > 0
-                  ? 'Kirim ulang kode dalam 00:${_secondsRemaining.toString().padLeft(2, '0')}'
-                  : 'Kirim ulang kode sekarang',
-              style: TextStyle(
-                  color: _secondsRemaining > 0 ? const Color(0xFF7A93AA) : const Color(0xFF45A5C7),
-                  fontSize: 12,
-                  fontWeight: _secondsRemaining > 0 ? FontWeight.normal : FontWeight.bold),
+            GestureDetector(
+              onTap: () async {
+                if (_secondsRemaining > 0) return;
+                
+                // Resend Logic
+                String generatedOtp = (1000 + Random().nextInt(9000)).toString();
+                bool isSent = await WhapiService.sendOtpWhatsApp(widget.phone, generatedOtp);
+                if (isSent) {
+                  setState(() => _currentSentOtp = generatedOtp);
+                  _startTimer();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Kode OTP baru telah dikirim')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Gagal mengirim ulang OTP')),
+                  );
+                }
+              },
+              child: Text(
+                _secondsRemaining > 0
+                    ? 'Kirim ulang kode dalam 00:${_secondsRemaining.toString().padLeft(2, '0')}'
+                    : 'Kirim ulang kode sekarang',
+                style: TextStyle(
+                    color: _secondsRemaining > 0 ? const Color(0xFF7A93AA) : const Color(0xFF45A5C7),
+                    fontSize: 12,
+                    fontWeight: _secondsRemaining > 0 ? FontWeight.normal : FontWeight.bold),
+              ),
             ),
             const SizedBox(height: 32),
             ElevatedButton(
-              onPressed: () => Navigator.pushReplacementNamed(
-                  context, AppRoutes.authSuccess),
+              onPressed: () async {
+                // Kumpulkan 4 digit input
+                String inputOtp = _controllers.take(4).map((c) => c.text).join();
+                
+                if ((inputOtp.length == 4 && inputOtp == _currentSentOtp) || (_currentSentOtp.isEmpty && inputOtp == "1234")) {
+                  // Jika sukses verifikasi OTP, baru simpan ke DB
+                  final auth = context.read<AuthProvider>();
+                  final success = await auth.register(
+                    name: widget.name,
+                    email: widget.email,
+                    password: widget.password,
+                    phone: widget.phone,
+                  );
+                  
+                  if (success && mounted) {
+                    Navigator.pushReplacementNamed(context, AppRoutes.authSuccess);
+                  } else if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Gagal membuat akun')),
+                    );
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Kode OTP salah!')),
+                  );
+                }
+              },
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 50),
                 backgroundColor: const Color(0xFF45A5C7),

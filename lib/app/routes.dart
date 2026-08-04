@@ -23,6 +23,7 @@ class AppRoutes {
   static const doctorDetail = '/owner/doctor-detail';
   static const booking = '/owner/booking';
   static const payment = '/owner/payment';
+  static const paymentSuccess = '/owner/payment-success';
   static const consultationPrep = '/owner/consultation-prep';
   static const ownerConsultations = '/owner/consultations';
   static const reviewForm = '/owner/review-form';
@@ -34,6 +35,9 @@ class AppRoutes {
   static const consultationResult = '/owner/consultation-result';
   static const electronicPrescription = '/owner/electronic-prescription';
   static const pharmacySelection = '/owner/pharmacy-selection';
+  static const medicineCheckout = '/owner/medicine-checkout';
+  static const medicinePayment = '/owner/medicine-payment';
+  static const medicineTracker = '/owner/medicine-tracker';
   static const monitoringLog = '/owner/monitoring-log';
 
   static const stateDemo = '/owner/state-demo';
@@ -42,6 +46,7 @@ class AppRoutes {
   static const ownerMedical = '/owner/medical';
   static const ownerProfile = '/owner/profile';
   static const editProfile = '/owner/edit-profile';
+  static const notificationSettings = '/owner/notification-settings';
 
   static const doctorHome = '/doctor';
   static const doctorNotifications = '/doctor/notifications';
@@ -58,22 +63,30 @@ class AppRoutes {
   static const doctorProfile = '/doctor/profile';
   static const doctorProfileDetail = '/doctor/profile-detail';
   static const doctorSettings = '/doctor/settings';
+  static const doctorNotificationSettings = '/doctor/notification-settings';
+  static const doctorDailySchedule = '/doctor/daily-schedule';
+  static const doctorAddSchedule = '/doctor/add-schedule';
   static const doctorSupport = '/doctor/support';
 
   static const adminHome = '/admin';
   static const adminNotifications = '/admin/notifications';
   static const adminPatients = '/admin/patients';
+  static const adminFilteredPatients = '/admin/filtered-patients';
   static const adminPatientDetail = '/admin/patient-detail';
   static const adminDoctors = '/admin/doctors';
+  static const adminFilteredDoctors = '/admin/filtered-doctors';
   static const adminAddDoctor = '/admin/add-doctor';
   static const adminServices = '/admin/services';
   static const adminServiceCategories = '/admin/service-categories';
   static const adminMedicines = '/admin/medicines';
   static const adminAddMedicine = '/admin/add-medicine';
   static const adminTransactions = '/admin/transactions';
+  static const adminFilteredTransactions = '/admin/filtered_transactions';
   static const adminReports = '/admin/reports';
   static const adminConsultations = '/admin/consultations';
   static const adminTickets = '/admin/tickets';
   static const adminSettings = '/admin/settings';
+  static const adminIntegration = '/admin/settings/integration';
+  static const adminNotificationSettings = '/admin/notification-settings';
   static const adminUsers = '/admin/users';
 }

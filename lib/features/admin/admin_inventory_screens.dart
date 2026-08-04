@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/routes.dart';
+import '../../database/database_helper.dart';
 
 // ==== MOCKUP 13: MANAJEMEN LAYANAN ====
 class AdminServiceManagementScreen extends StatelessWidget {
@@ -69,28 +70,34 @@ class AdminServiceManagementScreen extends StatelessWidget {
             ),
 
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                children: [
-                  _buildServiceItem(
-                      Icons.chat_bubble_outline,
-                      Colors.blue,
-                      'Konsultasi Online',
-                      'Konsultasi via chat atau video call',
-                      true),
-                  _buildServiceItem(
-                      Icons.medical_services_outlined,
-                      Colors.green,
-                      'Visit / Pemeriksaan',
-                      'Pemeriksaan langsung di klinik',
-                      true),
-                  _buildServiceItem(Icons.vaccines_outlined, Colors.orange,
-                      'Vaksinasi', 'Layanan vaksinasi hewan', true),
-                  _buildServiceItem(Icons.content_cut, Colors.purple,
-                      'Operasi / Bedah', 'Tindakan operasi hewan', true),
-                  _buildServiceItem(Icons.pets, Colors.teal, 'Grooming',
-                      'Perawatan dan grooming hewan', false),
-                ],
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: DatabaseHelper.instance.getAllServices(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final services = snapshot.data ?? [];
+                  if (services.isEmpty) return const Center(child: Text("Belum ada layanan"));
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    itemCount: services.length,
+                    itemBuilder: (context, index) {
+                      final s = services[index];
+                      // Assign dummy icons based on category for visual mockup purposes
+                      IconData icon = Icons.medical_services_outlined;
+                      Color color = Colors.blue;
+                      if (s['category'] == 'Vaksin') { icon = Icons.vaccines_outlined; color = Colors.orange; }
+                      if (s['category'] == 'Operasi') { icon = Icons.content_cut; color = Colors.purple; }
+                      
+                      return _buildServiceItem(
+                        icon, color, 
+                        s['name'] ?? '', 
+                        'Rp ${s['price'] ?? 0}', 
+                        (s['status'] == 'Aktif')
+                      );
+                    }
+                  );
+                },
               ),
             ),
 
@@ -334,20 +341,28 @@ class AdminMedicineManagementScreen extends StatelessWidget {
             ),
 
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                children: [
-                  _buildMedicineItem('Antibiotik Amoxicillin', 'Tablet 250 mg',
-                      120, Colors.blue),
-                  _buildMedicineItem(
-                      'Vitamin B-Complex', 'Botol 100 ml', 85, Colors.orange),
-                  _buildMedicineItem(
-                      'Obat Cacing Drontal', 'Tablet', 45, Colors.green),
-                  _buildMedicineItem(
-                      'Salep Kulit PetCare', 'Tube 15 g', 60, Colors.purple),
-                  _buildMedicineItem(
-                      'Obat Mata EyePet', 'Tetes 10 ml', 30, Colors.red),
-                ],
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: DatabaseHelper.instance.getAllMedicines(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final medicines = snapshot.data ?? [];
+                  if (medicines.isEmpty) return const Center(child: Text("Belum ada data obat"));
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    itemCount: medicines.length,
+                    itemBuilder: (context, index) {
+                      final med = medicines[index];
+                      return _buildMedicineItem(
+                        med['name'] ?? '',
+                        '${med['category']} - Rp ${med['price']}',
+                        (med['stock'] as num?)?.toInt() ?? 0,
+                        Colors.blue
+                      );
+                    }
+                  );
+                }
               ),
             ),
 

@@ -14,7 +14,7 @@ class DatabaseHelper {
   Future<Database> _init() async {
     final path = join(await getDatabasesPath(), 'halopet.db');
     return openDatabase(path,
-        version: 10,
+        version: 13,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
         onOpen: (db) async => _seed(db));
@@ -26,23 +26,23 @@ class DatabaseHelper {
     await db.execute(
         '''CREATE TABLE doctors(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL UNIQUE, specialist TEXT NOT NULL, license TEXT NOT NULL, rating REAL DEFAULT 0, experience INTEGER DEFAULT 0, bio TEXT DEFAULT '', consultation_fee REAL DEFAULT 50000, verified INTEGER DEFAULT 1, FOREIGN KEY(user_id) REFERENCES users(id))''');
     await db.execute(
-        '''CREATE TABLE pets(id INTEGER PRIMARY KEY AUTOINCREMENT, owner_id INTEGER NOT NULL, name TEXT NOT NULL, species TEXT NOT NULL, breed TEXT DEFAULT '', gender TEXT DEFAULT '', age INTEGER DEFAULT 0, weight REAL DEFAULT 0, photo TEXT DEFAULT '', tanggal_lahir TEXT DEFAULT '', warna_ciri TEXT DEFAULT '', status_steril TEXT DEFAULT 'Belum Steril', alergi TEXT DEFAULT '', additional_photos TEXT DEFAULT '[]', FOREIGN KEY(owner_id) REFERENCES users(id))''');
+        '''CREATE TABLE pets(id INTEGER PRIMARY KEY AUTOINCREMENT, owner_id INTEGER NOT NULL, name TEXT NOT NULL, species TEXT NOT NULL, breed TEXT DEFAULT '', gender TEXT DEFAULT '', age INTEGER DEFAULT 0, weight REAL DEFAULT 0, photo TEXT DEFAULT '', tanggal_lahir TEXT DEFAULT '', warna_ciri TEXT DEFAULT '', status_steril TEXT DEFAULT 'Belum Steril', alergi TEXT DEFAULT '', additional_photos TEXT DEFAULT '[]', microchip_id TEXT DEFAULT '', blood_type TEXT DEFAULT '', FOREIGN KEY(owner_id) REFERENCES users(id))''');
     await db.execute(
-        '''CREATE TABLE vaccinations(id INTEGER PRIMARY KEY AUTOINCREMENT, pet_id INTEGER NOT NULL, name TEXT NOT NULL, date TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'Aktif', next_date TEXT DEFAULT '', FOREIGN KEY(pet_id) REFERENCES pets(id))''');
+        '''CREATE TABLE vaccinations(id INTEGER PRIMARY KEY AUTOINCREMENT, pet_id INTEGER NOT NULL, name TEXT NOT NULL, date TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'Aktif', next_date TEXT DEFAULT '', brand TEXT DEFAULT '', batch_number TEXT DEFAULT '', FOREIGN KEY(pet_id) REFERENCES pets(id))''');
     await db.execute(
         '''CREATE TABLE diseases(id INTEGER PRIMARY KEY AUTOINCREMENT, pet_id INTEGER NOT NULL, name TEXT NOT NULL, date TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'Sembuh', FOREIGN KEY(pet_id) REFERENCES pets(id))''');
     await db.execute(
-        '''CREATE TABLE schedules(id INTEGER PRIMARY KEY AUTOINCREMENT, doctor_id INTEGER NOT NULL, date TEXT NOT NULL, time TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'available', FOREIGN KEY(doctor_id) REFERENCES doctors(id))''');
+        '''CREATE TABLE schedules(id INTEGER PRIMARY KEY AUTOINCREMENT, doctor_id INTEGER NOT NULL, date TEXT NOT NULL, time TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'available', max_patients INTEGER NOT NULL DEFAULT 1, FOREIGN KEY(doctor_id) REFERENCES doctors(id))''');
     await db.execute(
         '''CREATE TABLE consultations(id INTEGER PRIMARY KEY AUTOINCREMENT, pet_id INTEGER NOT NULL, doctor_id INTEGER NOT NULL, schedule_id INTEGER, complaint TEXT NOT NULL, method TEXT DEFAULT 'Chat', status TEXT NOT NULL DEFAULT 'waiting', is_control INTEGER DEFAULT 0, parent_consultation_id INTEGER, created_at TEXT NOT NULL, FOREIGN KEY(pet_id) REFERENCES pets(id), FOREIGN KEY(doctor_id) REFERENCES doctors(id))''');
     await db.execute(
-        '''CREATE TABLE complaints(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, service_type TEXT DEFAULT '', main_complaints TEXT DEFAULT '', duration TEXT DEFAULT '', appetite TEXT DEFAULT '', activity TEXT DEFAULT '', urine TEXT DEFAULT '', feces TEXT DEFAULT '', vomit INTEGER DEFAULT 0, respiratory TEXT DEFAULT '', skin_coat TEXT DEFAULT '', medication TEXT DEFAULT '', photos_videos TEXT DEFAULT '', FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
+        '''CREATE TABLE complaints(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, service_type TEXT DEFAULT '', main_complaints TEXT DEFAULT '', duration TEXT DEFAULT '', appetite TEXT DEFAULT '', activity TEXT DEFAULT '', urine TEXT DEFAULT '', feces TEXT DEFAULT '', vomit INTEGER DEFAULT 0, respiratory TEXT DEFAULT '', skin_coat TEXT DEFAULT '', medication TEXT DEFAULT '', photos_videos TEXT DEFAULT '', water_intake TEXT DEFAULT '', FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
     await db.execute(
-        '''CREATE TABLE screenings(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, difficulty_breathing INTEGER DEFAULT 0, seizures INTEGER DEFAULT 0, unconscious INTEGER DEFAULT 0, heavy_bleeding INTEGER DEFAULT 0, severe_trauma INTEGER DEFAULT 0, cannot_stand INTEGER DEFAULT 0, poisoning INTEGER DEFAULT 0, cannot_urinate INTEGER DEFAULT 0, continuous_vomiting INTEGER DEFAULT 0, result_category TEXT DEFAULT 'Ringan', FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
+        '''CREATE TABLE screenings(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, difficulty_breathing INTEGER DEFAULT 0, seizures INTEGER DEFAULT 0, unconscious INTEGER DEFAULT 0, heavy_bleeding INTEGER DEFAULT 0, severe_trauma INTEGER DEFAULT 0, cannot_stand INTEGER DEFAULT 0, poisoning INTEGER DEFAULT 0, cannot_urinate INTEGER DEFAULT 0, continuous_vomiting INTEGER DEFAULT 0, result_category TEXT DEFAULT 'Ringan', mucous_membrane TEXT DEFAULT '', crt TEXT DEFAULT '', FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
     await db.execute(
         '''CREATE TABLE messages(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, sender_id INTEGER NOT NULL, message TEXT NOT NULL, is_read INTEGER DEFAULT 0, created_at TEXT NOT NULL, FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
     await db.execute(
-        '''CREATE TABLE medical_records(id INTEGER PRIMARY KEY AUTOINCREMENT, pet_id INTEGER NOT NULL, doctor_id INTEGER NOT NULL, consultation_id INTEGER, diagnosis TEXT NOT NULL, treatment TEXT DEFAULT '', medicine TEXT DEFAULT '', notes TEXT DEFAULT '', date TEXT NOT NULL, FOREIGN KEY(pet_id) REFERENCES pets(id), FOREIGN KEY(doctor_id) REFERENCES doctors(id))''');
+        '''CREATE TABLE medical_records(id INTEGER PRIMARY KEY AUTOINCREMENT, pet_id INTEGER NOT NULL, doctor_id INTEGER NOT NULL, consultation_id INTEGER, diagnosis TEXT NOT NULL, treatment TEXT DEFAULT '', medicine TEXT DEFAULT '', notes TEXT DEFAULT '', date TEXT NOT NULL, temperature REAL DEFAULT 0, heart_rate INTEGER DEFAULT 0, respiratory_rate INTEGER DEFAULT 0, weight_at_visit REAL DEFAULT 0, FOREIGN KEY(pet_id) REFERENCES pets(id), FOREIGN KEY(doctor_id) REFERENCES doctors(id))''');
     await db.execute(
         '''CREATE TABLE notifications(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, message TEXT NOT NULL, is_read INTEGER DEFAULT 0, created_at TEXT NOT NULL)''');
     await db.execute(
@@ -59,11 +59,22 @@ class DatabaseHelper {
         '''CREATE TABLE reviews(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL UNIQUE, rating_doctor REAL DEFAULT 0, rating_info REAL DEFAULT 0, rating_app REAL DEFAULT 0, rating_quality REAL DEFAULT 0, review_text TEXT DEFAULT '', created_at TEXT NOT NULL, FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
     await db.execute(
         '''CREATE TABLE help_tickets(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'open', admin_reply TEXT DEFAULT '', created_at TEXT NOT NULL, FOREIGN KEY(user_id) REFERENCES users(id))''');
+    await db.execute(
+        '''CREATE TABLE services(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, category TEXT NOT NULL, price REAL NOT NULL, status TEXT DEFAULT 'Aktif')''');
+    await db.execute(
+        '''CREATE TABLE medicines(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, category TEXT NOT NULL, stock INTEGER NOT NULL, price REAL NOT NULL, status TEXT DEFAULT 'Tersedia')''');
 
     await _seed(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 11) {
+      try {
+        await db.execute('ALTER TABLE schedules ADD COLUMN max_patients INTEGER NOT NULL DEFAULT 1');
+      } catch (e) {
+        // column might exist
+      }
+    }
     if (oldVersion < 9) {
       try {
         await db.execute('ALTER TABLE messages ADD COLUMN is_read INTEGER DEFAULT 0');
@@ -215,6 +226,37 @@ class DatabaseHelper {
         'consultation_fee': 150000,
         'verified': 1
       });
+    }
+    if (oldVersion < 12) {
+      await db.execute(
+          '''CREATE TABLE services(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, category TEXT NOT NULL, price REAL NOT NULL, status TEXT DEFAULT 'Aktif')''');
+      await db.execute(
+          '''CREATE TABLE medicines(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, category TEXT NOT NULL, stock INTEGER NOT NULL, price REAL NOT NULL, status TEXT DEFAULT 'Tersedia')''');
+      // Tambah dummy services
+      await db.insert('services', {'name': 'Vaksinasi Rabies', 'category': 'Vaksin', 'price': 150000});
+      await db.insert('services', {'name': 'Sterilisasi Kucing', 'category': 'Operasi', 'price': 500000});
+      await db.insert('services', {'name': 'Grooming Lengkap', 'category': 'Perawatan', 'price': 100000});
+      // Tambah dummy medicines
+      await db.insert('medicines', {'name': 'Amoxicillin 250mg', 'category': 'Antibiotik', 'stock': 120, 'price': 50000});
+      await db.insert('medicines', {'name': 'Vaksin Feline Trio', 'category': 'Vaksin', 'stock': 35, 'price': 200000});
+      await db.insert('medicines', {'name': 'Drontal Cat', 'category': 'Obat Cacing', 'stock': 0, 'price': 25000, 'status': 'Habis'});
+    }
+    if (oldVersion < 13) {
+      await db.execute("ALTER TABLE pets ADD COLUMN microchip_id TEXT DEFAULT ''");
+      await db.execute("ALTER TABLE pets ADD COLUMN blood_type TEXT DEFAULT ''");
+      
+      await db.execute("ALTER TABLE medical_records ADD COLUMN temperature REAL DEFAULT 0");
+      await db.execute("ALTER TABLE medical_records ADD COLUMN heart_rate INTEGER DEFAULT 0");
+      await db.execute("ALTER TABLE medical_records ADD COLUMN respiratory_rate INTEGER DEFAULT 0");
+      await db.execute("ALTER TABLE medical_records ADD COLUMN weight_at_visit REAL DEFAULT 0");
+      
+      await db.execute("ALTER TABLE vaccinations ADD COLUMN brand TEXT DEFAULT ''");
+      await db.execute("ALTER TABLE vaccinations ADD COLUMN batch_number TEXT DEFAULT ''");
+      
+      await db.execute("ALTER TABLE screenings ADD COLUMN mucous_membrane TEXT DEFAULT ''");
+      await db.execute("ALTER TABLE screenings ADD COLUMN crt TEXT DEFAULT ''");
+      
+      await db.execute("ALTER TABLE complaints ADD COLUMN water_intake TEXT DEFAULT ''");
     }
   }
 
@@ -464,6 +506,39 @@ class DatabaseHelper {
       (await database).query('schedules',
           where: 'doctor_id=?', whereArgs: [doctorId], orderBy: 'date, time');
 
+  Future<int> insertSchedule(Map<String, dynamic> schedule) async {
+    return (await database).insert('schedules', schedule);
+  }
+
+  Future<int> deleteSchedule(int id) async =>
+      (await database).delete('schedules', where: 'id = ?', whereArgs: [id]);
+
+  Future<List<Map<String, dynamic>>> getDoctorCalendarEvents(int doctorId) async {
+    final rows = await (await database).rawQuery(
+        '''SELECT s.id as schedule_id, s.date, s.time, s.status as schedule_status, s.max_patients, 
+                  c.status as consultation_status, c.is_control, 
+                  p.name as pet_name, p.breed 
+           FROM schedules s 
+           LEFT JOIN consultations c ON c.schedule_id = s.id 
+           LEFT JOIN pets p ON p.id = c.pet_id 
+           WHERE s.doctor_id=? 
+           ORDER BY s.date, s.time''',
+        [doctorId]);
+        
+    return rows.map((r) {
+       return {
+          'schedule_id': r['schedule_id'],
+          'date': r['date'],
+          'time': r['time'],
+          'max_patients': r['max_patients'] ?? 1,
+          'pet': r['pet_name'] ?? 'Tersedia',
+          'breed': r['breed'] ?? '-',
+          'type': (r['is_control'] == 1) ? 'Kontrol' : 'Konsultasi Online',
+          'status': r['consultation_status'] ?? r['schedule_status'],
+       };
+    }).toList();
+  }
+
   Future<int> createConsultation(
       {required int petId,
       required int doctorId,
@@ -534,11 +609,48 @@ class DatabaseHelper {
         [ownerId]);
   }
 
+  Future<Map<String, dynamic>> getConsultationDetails(int consultationId) async {
+    final db = await database;
+    final complaints = await db.query('complaints', where: 'consultation_id=?', whereArgs: [consultationId]);
+    final screenings = await db.query('screenings', where: 'consultation_id=?', whereArgs: [consultationId]);
+    
+    return {
+      'complaint': complaints.isNotEmpty ? complaints.first : null,
+      'screening': screenings.isNotEmpty ? screenings.first : null,
+    };
+  }
+
+  Future<List<Map<String, dynamic>>> getDoctorPatients(int doctorId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.rawQuery('''
+      SELECT DISTINCT p.id as pet_id, p.name as pet_name, p.breed as pet_breed, u.name as owner_name
+      FROM consultations c
+      JOIN pets p ON c.pet_id = p.id
+      JOIN users u ON p.owner_id = u.id
+      WHERE c.doctor_id = ?
+    ''', [doctorId]);
+    return maps;
+  }
+
   Future<List<Map<String, Object?>>> getDoctorConsultations(
       int doctorId) async {
     return (await database).rawQuery(
         '''SELECT c.*, p.name pet_name, p.species, p.breed, u.name owner_name, s.date schedule_date, s.time schedule_time FROM consultations c JOIN pets p ON p.id=c.pet_id JOIN users u ON u.id=p.owner_id LEFT JOIN schedules s ON s.id=c.schedule_id WHERE c.doctor_id=? ORDER BY c.id DESC''',
         [doctorId]);
+  }
+
+  Future<List<Map<String, Object?>>> getConsultationsByPetId(int petId) async {
+    return (await database).rawQuery(
+        '''SELECT c.*, s.date schedule_date, s.time schedule_time, 
+                  cr.diagnosis, cr.advice, p.notes as prescription,
+                  comp.main_complaints
+           FROM consultations c 
+           LEFT JOIN schedules s ON s.id = c.schedule_id
+           LEFT JOIN consultation_results cr ON cr.consultation_id = c.id
+           LEFT JOIN prescriptions p ON p.consultation_id = c.id
+           LEFT JOIN complaints comp ON comp.consultation_id = c.id
+           WHERE c.pet_id=? AND c.status='finished' ORDER BY c.id DESC''',
+        [petId]);
   }
 
   Future<int> updateConsultationStatus(int id, String status) async =>
@@ -562,9 +674,13 @@ class DatabaseHelper {
     await (await database).update(
       'messages',
       {'is_read': 1},
-      where: 'consultation_id = ? AND sender_id != ?',
+      where: 'consultation_id = ? AND sender_id != ? AND is_read = 0',
       whereArgs: [consultationId, userId],
     );
+  }
+
+  Future<void> deleteMessage(int messageId) async {
+    await (await database).delete('messages', where: 'id = ?', whereArgs: [messageId]);
   }
 
   Future<List<Map<String, Object?>>> getMedicalRecordsForOwner(
@@ -592,16 +708,301 @@ class DatabaseHelper {
     };
   }
 
+  Future<Map<String, int>> getAdminDashboardSummary({DateTime? startDate, DateTime? endDate}) async {
+    final db = await database;
+    final today = DateTime.now();
+    final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    
+    String consultationQuery = "SELECT COUNT(*) FROM consultations WHERE date(created_at) = '$todayStr'";
+    if (startDate != null && endDate != null) {
+      final startStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+      final endStr = '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+      consultationQuery = "SELECT COUNT(*) FROM consultations WHERE date(created_at) >= '$startStr' AND date(created_at) <= '$endStr'";
+    }
+
+    // Konsultasi hari ini (atau sesuai rentang tanggal)
+    final consultationsToday = Sqflite.firstIntValue(
+      await db.rawQuery(consultationQuery)
+    ) ?? 0;
+    // Jumlah Pasien (berdasarkan pet_id unik di konsultasi pada periode ini)
+    String petQuery = "SELECT COUNT(DISTINCT pet_id) FROM consultations";
+    if (startDate != null && endDate != null) {
+      final startStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+      final endStr = '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+      petQuery += " WHERE date(created_at) >= '$startStr' AND date(created_at) <= '$endStr'";
+    } else {
+      petQuery += " WHERE date(created_at) = '$todayStr'";
+    }
+    final totalPets = Sqflite.firstIntValue(
+      await db.rawQuery(petQuery)
+    ) ?? 0;
+
+    // Jumlah Dokter (berdasarkan doctor_id unik di konsultasi pada periode ini)
+    String doctorQuery = "SELECT COUNT(DISTINCT doctor_id) FROM consultations";
+    if (startDate != null && endDate != null) {
+      final startStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+      final endStr = '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+      doctorQuery += " WHERE date(created_at) >= '$startStr' AND date(created_at) <= '$endStr'";
+    } else {
+      doctorQuery += " WHERE date(created_at) = '$todayStr'";
+    }
+    final totalDoctors = Sqflite.firstIntValue(
+      await db.rawQuery(doctorQuery)
+    ) ?? 0;
+
+    // Transaksi belum lunas (status menunggu)
+    String unpaidQuery = "SELECT COUNT(*) FROM consultations WHERE status = 'menunggu' OR status = 'waiting' OR status = 'scheduled'";
+    if (startDate != null && endDate != null) {
+      final startStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+      final endStr = '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+      unpaidQuery = "SELECT COUNT(*) FROM consultations WHERE (status = 'menunggu' OR status = 'waiting' OR status = 'scheduled') AND date(created_at) >= '$startStr' AND date(created_at) <= '$endStr'";
+    } else {
+      unpaidQuery = "SELECT COUNT(*) FROM consultations WHERE (status = 'menunggu' OR status = 'waiting' OR status = 'scheduled') AND date(created_at) = '$todayStr'";
+    }
+    final unpaidTransactions = Sqflite.firstIntValue(
+      await db.rawQuery(unpaidQuery)
+    ) ?? 0;
+
+    // Pendapatan dari konsultasi yang selesai
+    String revenueQuery = "SELECT SUM(d.consultation_fee) FROM consultations c JOIN doctors d ON c.doctor_id = d.id WHERE (c.status = 'completed' OR c.status = 'selesai' OR c.status = 'finished')";
+    if (startDate != null && endDate != null) {
+      final startStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+      final endStr = '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+      revenueQuery += " AND date(c.created_at) >= '$startStr' AND date(c.created_at) <= '$endStr'";
+    } else {
+      revenueQuery += " AND date(c.created_at) = '$todayStr'";
+    }
+    
+    final revenueResult = await db.rawQuery(revenueQuery);
+    final totalRevenue = (revenueResult.first.values.first as num?)?.toInt() ?? 0;
+
+    String statusQuery = "SELECT status, COUNT(*) as count FROM consultations";
+    if (startDate != null && endDate != null) {
+      final startStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+      final endStr = '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+      statusQuery += " WHERE date(created_at) >= '$startStr' AND date(created_at) <= '$endStr'";
+    } else {
+      statusQuery += " WHERE date(created_at) = '$todayStr'";
+    }
+    statusQuery += " GROUP BY status";
+    final statusResult = await db.rawQuery(statusQuery);
+    
+    int statusFinished = 0;
+    int statusCancelled = 0;
+    int statusScheduled = 0;
+    int statusMenunggu = 0;
+    int statusBelumLunas = 0;
+    int statusProgress = 0;
+    
+    for (var row in statusResult) {
+      final status = (row['status'] as String?)?.toLowerCase();
+      final count = (row['count'] as num?)?.toInt() ?? 0;
+      if (status == 'finished' || status == 'completed' || status == 'selesai') {
+        statusFinished += count;
+      } else if (status == 'cancelled' || status == 'batal') {
+        statusCancelled += count;
+      } else if (status == 'scheduled' || status == 'dijadwalkan' || status == 'booked') {
+        statusScheduled += count;
+      } else if (status == 'waiting_payment') {
+        statusBelumLunas += count;
+      } else if (status == 'menunggu' || status == 'waiting') {
+        statusMenunggu += count;
+      } else {
+        statusProgress += count;
+      }
+    }
+
+    return {
+      'konsultasi_hari_ini': consultationsToday,
+      'jumlah_pasien': totalPets,
+      'jumlah_dokter': totalDoctors,
+      'transaksi_belum_lunas': unpaidTransactions,
+      'total_pendapatan': totalRevenue,
+      'status_finished': statusFinished,
+      'status_cancelled': statusCancelled,
+      'status_scheduled': statusScheduled,
+      'status_menunggu': statusMenunggu,
+      'status_belum_lunas': statusBelumLunas,
+      'status_progress': statusProgress,
+    };
+  }
+
+  Future<Map<String, dynamic>> getAdminReportStats() async {
+    final db = await database;
+    
+    final totalConsultations = Sqflite.firstIntValue(
+      await db.rawQuery("SELECT COUNT(*) FROM consultations")
+    ) ?? 0;
+    
+    final totalPets = Sqflite.firstIntValue(
+      await db.rawQuery("SELECT COUNT(*) FROM pets")
+    ) ?? 0;
+    
+    // In a real app we'd sum up actual transaction amounts from an invoices or payments table
+    // For now we'll mock the revenue as totalConsultations * 150000 (assumed average price)
+    final revenue = totalConsultations * 150000;
+    
+    final totalTransactions = Sqflite.firstIntValue(
+      await db.rawQuery("SELECT COUNT(*) FROM consultations WHERE status = 'selesai' OR status = 'completed'")
+    ) ?? 0;
+    
+    return {
+      'total_konsultasi': totalConsultations,
+      'total_pasien': totalPets,
+      'pendapatan': revenue,
+      'transaksi': totalTransactions,
+    };
+  }
+
+  Future<List<Map<String, dynamic>>> getAdminChartData({DateTime? startDate, DateTime? endDate}) async {
+    final db = await database;
+    
+    // Default to last 7 days if no dates provided
+    final end = endDate ?? DateTime.now();
+    final start = startDate ?? end.subtract(const Duration(days: 6));
+    
+    final startStr = '${start.year}-${start.month.toString().padLeft(2, '0')}-${start.day.toString().padLeft(2, '0')}';
+    final endStr = '${end.year}-${end.month.toString().padLeft(2, '0')}-${end.day.toString().padLeft(2, '0')}';
+    
+    final query = '''
+      SELECT 
+        date(c.created_at) as date,
+        COUNT(c.id) as total_consultations,
+        SUM(CASE WHEN c.status IN ('completed', 'selesai', 'finished') THEN d.consultation_fee ELSE 0 END) as total_revenue
+      FROM consultations c
+      JOIN doctors d ON c.doctor_id = d.id
+      WHERE date(c.created_at) >= '$startStr' AND date(c.created_at) <= '$endStr'
+      GROUP BY date(c.created_at)
+      ORDER BY date(c.created_at) ASC
+    ''';
+    
+    final result = await db.rawQuery(query);
+    
+    // Fill in missing dates with zero values
+    final Map<String, Map<String, dynamic>> dataMap = {};
+    for (var row in result) {
+      dataMap[row['date'] as String] = row;
+    }
+    
+    final List<Map<String, dynamic>> finalData = [];
+    DateTime currentDate = start;
+    while (currentDate.isBefore(end) || currentDate.isAtSameMomentAs(end)) {
+      final dateStr = '${currentDate.year}-${currentDate.month.toString().padLeft(2, '0')}-${currentDate.day.toString().padLeft(2, '0')}';
+      if (dataMap.containsKey(dateStr)) {
+        finalData.add(dataMap[dateStr]!);
+      } else {
+        finalData.add({
+          'date': dateStr,
+          'total_consultations': 0,
+          'total_revenue': 0,
+        });
+      }
+      currentDate = currentDate.add(const Duration(days: 1));
+    }
+    
+    return finalData;
+  }
+
   Future<List<Map<String, Object?>>> getAllUsers() async =>
       (await database).query('users',
           columns: ['id', 'name', 'email', 'phone', 'role', 'created_at'],
           orderBy: 'id DESC');
-  Future<
-      List<
-          Map<String,
-              Object?>>> getAllConsultations() async => (await database).rawQuery(
-      '''SELECT c.*, p.name pet_name, owner.name owner_name, doctor.name doctor_name FROM consultations c JOIN pets p ON p.id=c.pet_id JOIN users owner ON owner.id=p.owner_id JOIN doctors d ON d.id=c.doctor_id JOIN users doctor ON doctor.id=d.user_id ORDER BY c.id DESC''');
 
+  Future<List<Map<String, Object?>>> getAdminPatients({DateTime? startDate, DateTime? endDate}) async {
+    String query = '''SELECT p.*, u.name as owner_name 
+         FROM pets p 
+         JOIN users u ON u.id = p.owner_id''';
+    
+    if (startDate != null && endDate != null) {
+      final startStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+      final endStr = '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+      query += " WHERE EXISTS (SELECT 1 FROM consultations c WHERE c.pet_id = p.id AND date(c.created_at) >= '$startStr' AND date(c.created_at) <= '$endStr')";
+    }
+    query += " ORDER BY p.id DESC";
+    
+    return (await database).rawQuery(query);
+  }
+
+  Future<List<Map<String, Object?>>> getAdminDoctors({DateTime? startDate, DateTime? endDate}) async {
+    String query = '''SELECT d.*, u.name as name, u.email as email, u.phone as phone
+         FROM doctors d 
+         JOIN users u ON u.id = d.user_id''';
+         
+    if (startDate != null && endDate != null) {
+      final startStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+      final endStr = '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+      query += " WHERE EXISTS (SELECT 1 FROM consultations c WHERE c.doctor_id = d.id AND date(c.created_at) >= '$startStr' AND date(c.created_at) <= '$endStr')";
+    }
+    query += " ORDER BY d.id DESC";
+
+    return (await database).rawQuery(query);
+  }
+
+  Future<void> updateDoctorFee(int doctorId, double newFee) async {
+    await (await database).update(
+      'doctors',
+      {'consultation_fee': newFee},
+      where: 'id = ?',
+      whereArgs: [doctorId],
+    );
+  }
+
+  Future<List<Map<String, Object?>>> getAdminTransactions() async {
+    return (await database).rawQuery(
+      '''SELECT c.*, p.name as pet_name, u.name as owner_name, docu.name as doctor_name
+         FROM consultations c
+         JOIN pets p ON p.id = c.pet_id
+         JOIN users u ON u.id = p.owner_id
+         JOIN doctors d ON d.id = c.doctor_id
+         JOIN users docu ON docu.id = d.user_id
+         ORDER BY c.created_at DESC'''
+    );
+  }
+
+  Future<List<Map<String, Object?>>> getAdminFilteredTransactions({DateTime? startDate, DateTime? endDate}) async {
+    String query = '''SELECT c.*, p.name as pet_name, u.name as owner_name, docu.name as doctor_name
+         FROM consultations c
+         JOIN pets p ON p.id = c.pet_id
+         JOIN users u ON u.id = p.owner_id
+         JOIN doctors d ON d.id = c.doctor_id
+         JOIN users docu ON docu.id = d.user_id
+         WHERE (c.status = 'menunggu' OR c.status = 'waiting' OR c.status = 'scheduled')''';
+         
+    if (startDate != null && endDate != null) {
+      final startStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+      final endStr = '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+      query += " AND date(c.created_at) >= '$startStr' AND date(c.created_at) <= '$endStr'";
+    }
+    query += " ORDER BY c.created_at DESC";
+    
+    return (await database).rawQuery(query);
+  }
+
+  Future<List<Map<String, Object?>>> getAllServices() async {
+    return (await database).query('services', orderBy: 'id DESC');
+  }
+
+  Future<List<Map<String, Object?>>> getAllMedicines() async {
+    return (await database).query('medicines', orderBy: 'id DESC');
+  }
+
+  Future<List<Map<String, Object?>>> getAdminNotifications() async {
+    // Sebagai admin, kita ambil semua notifikasi atau buat sistem log
+    return (await database).query('notifications', orderBy: 'created_at DESC');
+  }
+  Future<List<Map<String, Object?>>> getAllConsultations({DateTime? startDate, DateTime? endDate}) async {
+    final db = await database;
+    String query = '''SELECT c.*, p.name pet_name, owner.name owner_name, doctor.name doctor_name, d.consultation_fee FROM consultations c JOIN pets p ON p.id=c.pet_id JOIN users owner ON owner.id=p.owner_id JOIN doctors d ON d.id=c.doctor_id JOIN users doctor ON doctor.id=d.user_id''';
+
+    if (startDate != null && endDate != null) {
+      final startStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+      final endStr = '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+      query += " WHERE date(c.created_at) >= '$startStr' AND date(c.created_at) <= '$endStr'";
+    }
+    query += " ORDER BY c.id DESC";
+
+    return await db.rawQuery(query);
+  }
   // v5 Methods
   Future<int> saveConsultationResult(
       int consultationId, Map<String, dynamic> data) async {
@@ -615,6 +1016,26 @@ class DatabaseHelper {
       'warning_signs': data['warning_signs'] ?? '',
       'follow_up': data['follow_up'] ?? '',
     });
+
+    final consRows = await db.query('consultations', where: 'id = ?', whereArgs: [consultationId], limit: 1);
+    if (consRows.isNotEmpty) {
+      final cons = consRows.first;
+      await db.insert('medical_records', {
+        'pet_id': cons['pet_id'],
+        'doctor_id': cons['doctor_id'],
+        'consultation_id': consultationId,
+        'diagnosis': data['diagnosis'] ?? '',
+        'treatment': data['advice'] ?? '',
+        'medicine': '',
+        'notes': data['observation'] ?? '',
+        'date': cons['date'] ?? DateTime.now().toIso8601String(),
+        'temperature': data['temperature'] ?? 0.0,
+        'heart_rate': data['heart_rate'] ?? 0,
+        'respiratory_rate': data['respiratory_rate'] ?? 0,
+        'weight_at_visit': data['weight_at_visit'] ?? 0.0,
+      });
+    }
+
     return id;
   }
 
@@ -645,6 +1066,10 @@ class DatabaseHelper {
         'qty': item['qty'] ?? '',
       });
     }
+    
+    final medicineStr = items.map((i) => "${i['medicine_name']} (${i['dose']} - ${i['qty']})").join(', ');
+    await db.update('medical_records', {'medicine': medicineStr}, where: 'consultation_id = ?', whereArgs: [consultationId]);
+    
     return pid;
   }
 
@@ -658,6 +1083,44 @@ class DatabaseHelper {
         where: 'prescription_id = ?', whereArgs: [p['id']]);
     return {...p, 'items': iRows};
   }
+
+  Future<List<Map<String, dynamic>>> getPrescriptionsByOwnerId(int ownerId) async {
+    final db = await database;
+    final query = '''
+      SELECT 
+        p.id as prescription_id,
+        p.notes,
+        p.created_at as prescription_date,
+        c.id as consultation_id,
+        c.complaint,
+        u.name as doctor_name,
+        pet.name as pet_name
+      FROM prescriptions p
+      JOIN consultations c ON p.consultation_id = c.id
+      JOIN users u ON c.doctor_id = u.id
+      JOIN pets pet ON c.pet_id = pet.id
+      WHERE pet.owner_id = ?
+      ORDER BY p.created_at DESC
+    ''';
+    
+    final pRows = await db.rawQuery(query, [ownerId]);
+    
+    List<Map<String, dynamic>> results = [];
+    for (var pRow in pRows) {
+      final items = await db.query('prescription_items', 
+        where: 'prescription_id = ?', 
+        whereArgs: [pRow['prescription_id']]
+      );
+      
+      results.add({
+        ...pRow,
+        'items': items,
+      });
+    }
+    
+    return results;
+  }
+
 
   Future<int> createMedicineOrder(int consultationId, String address,
       double medPrice, double delFee) async {

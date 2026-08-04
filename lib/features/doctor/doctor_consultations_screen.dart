@@ -117,7 +117,11 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
                                     ? () {
                                         Navigator.pushNamed(
                                             context, AppRoutes.consultationRoom,
-                                            arguments: {'consultation_id': c['id']});
+                                            arguments: {
+                                              'consultation_id': c['id'],
+                                              'chat_title': c['pet_name']?.toString() ?? 'Hewan',
+                                              'chat_subtitle': c['owner_name']?.toString() ?? 'Pemilik',
+                                            });
                                       }
                                     : null,
                                 child: Text(status.toUpperCase() == 'IN_PROGRESS' || status.toUpperCase() == 'ACCEPTED' ? 'Masuk Ruang Konsultasi' : 'Selesai'),

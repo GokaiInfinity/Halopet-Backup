@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../app/theme.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +11,8 @@ import '../../app/routes.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/consultation_provider.dart';
 import '../../database/database_helper.dart';
+import 'screens/chat_screen.dart' as chat_screen;
+import '../../utils/pdf_invoice_generator.dart' as pdf_gen;
 
 // ==== MOCKUP 31: RUANG KONSULTASI CHAT ====
 class ConsultationRoomScreen extends StatefulWidget {
@@ -111,10 +116,132 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
     }
   }
 
+  void _showQuestionnaire() async {
+    final details = await DatabaseHelper.instance.getConsultationDetails(consultationId);
+    final complaint = details['complaint'] as Map<String, dynamic>?;
+    final screening = details['screening'] as Map<String, dynamic>?;
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                    const Text('Hasil Kuesioner', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
+                    const SizedBox(height: 16),
+                    if (complaint == null && screening == null)
+                      const Text('Tidak ada data kuesioner.')
+                    else ...[
+                      if (complaint != null)
+                        Builder(
+                          builder: (context) {
+                            final mainComplaintsStr = complaint['main_complaints']?.toString() ?? '';
+                            Map<String, dynamic>? parsedComplaints;
+                            if (mainComplaintsStr.trim().startsWith('{')) {
+                              try {
+                                parsedComplaints = jsonDecode(mainComplaintsStr);
+                              } catch (_) {}
+                            }
+                            
+                            Widget buildField(String label, dynamic value, {bool isBool = false}) {
+                              if (value == null || value.toString().isEmpty || value.toString() == 'null' || value.toString() == '-') return const SizedBox.shrink();
+                              String displayValue = value.toString();
+                              if (isBool && value is int) {
+                                if (value == 0) return const SizedBox.shrink();
+                                displayValue = value == 1 ? 'Ya' : 'Tidak';
+                              }
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+                                    Text(displayValue),
+                                  ],
+                                ),
+                              );
+                            }
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                buildField('Layanan', complaint['service_type']),
+                                if (parsedComplaints != null) ...[
+                                  const Text('Gejala Utama', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+                                  const SizedBox(height: 4),
+                                  ...parsedComplaints.entries.map((e) {
+                                    final keyStr = e.key.split('_').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '').join(' ');
+                                    final valStr = e.value == true ? 'Ya' : e.value == false ? 'Tidak' : e.value.toString();
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 4.0),
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(flex: 2, child: Text(keyStr, style: const TextStyle(color: Colors.grey))),
+                                          Expanded(flex: 3, child: Text(valStr, style: const TextStyle(fontWeight: FontWeight.w500))),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                  const SizedBox(height: 8),
+                                ] else 
+                                  buildField('Gejala Utama', complaint['main_complaints']),
+                                buildField('Durasi', complaint['duration']),
+                                buildField('Nafsu Makan', complaint['appetite']),
+                                buildField('Aktivitas', complaint['activity']),
+                                buildField('Urin', complaint['urine']),
+                                buildField('Feses', complaint['feces']),
+                                buildField('Muntah', complaint['vomit'], isBool: true),
+                                buildField('Pernapasan', complaint['respiratory']),
+                                buildField('Kulit & Bulu', complaint['skin_coat']),
+                                buildField('Obat-obatan', complaint['medication']),
+                                const Divider(height: 24),
+                              ],
+                            );
+                          }
+                        ),
+                      if (screening != null) ...[
+                        const Text('Hasil Skrining Darurat', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                        const SizedBox(height: 8),
+                        Text('Kategori: ${screening['result_category']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        Text('Kesulitan Bernapas: ${screening['difficulty_breathing'] == 1 ? 'Ya' : 'Tidak'}'),
+                        Text('Kejang: ${screening['seizures'] == 1 ? 'Ya' : 'Tidak'}'),
+                        Text('Tidak Sadar: ${screening['unconscious'] == 1 ? 'Ya' : 'Tidak'}'),
+                        Text('Pendarahan Hebat: ${screening['heavy_bleeding'] == 1 ? 'Ya' : 'Tidak'}'),
+                        Text('Trauma Parah: ${screening['severe_trauma'] == 1 ? 'Ya' : 'Tidak'}'),
+                        Text('Tidak Bisa Berdiri: ${screening['cannot_stand'] == 1 ? 'Ya' : 'Tidak'}'),
+                        Text('Keracunan: ${screening['poisoning'] == 1 ? 'Ya' : 'Tidak'}'),
+                        Text('Tidak Bisa Kencing: ${screening['cannot_urinate'] == 1 ? 'Ya' : 'Tidak'}'),
+                        Text('Muntah Terus-menerus: ${screening['continuous_vomiting'] == 1 ? 'Ya' : 'Tidak'}'),
+                      ],
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final doctorName = widget.args['doctor_name'] ?? 'Dokter';
-    final doctorSpec = widget.args['specialist'] ?? 'Kulit & Bulu';
+    final chatTitle = widget.args['chat_title'] ?? widget.args['doctor_name'] ?? 'Dokter';
+    final chatSubtitle = widget.args['chat_subtitle'] ?? widget.args['specialist'] ?? 'Kulit & Bulu';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -138,12 +265,12 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(doctorName,
+                Text(chatTitle,
                     style: const TextStyle(
                         color: Color(0xFF0F2646),
                         fontSize: 14,
                         fontWeight: FontWeight.bold)),
-                Text(doctorSpec,
+                Text(chatSubtitle,
                     style: const TextStyle(
                         color: Color(0xFF7A93AA), fontSize: 11)),
               ],
@@ -163,6 +290,15 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
           ],
         ),
         actions: [
+          if (context.read<AuthProvider>().user?.role == 'doctor')
+            IconButton(
+              icon: const Icon(Icons.history, color: Color(0xFF45A5C7)),
+              onPressed: () => Navigator.pushNamed(context, AppRoutes.doctorMedicalHistory, arguments: widget.args),
+            ),
+          IconButton(
+            icon: const Icon(Icons.assignment, color: Color(0xFF45A5C7)),
+            onPressed: _showQuestionnaire,
+          ),
           IconButton(
             icon: const Icon(Icons.videocam, color: Color(0xFF45A5C7)),
             onPressed: () => Navigator.pushNamed(context, AppRoutes.videoCall,
@@ -172,24 +308,26 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
             icon: const Icon(Icons.call, color: Color(0xFF45A5C7)),
             onPressed: () {}, // Not implemented in mock
           ),
-          TextButton(
-            onPressed: () {
-              final role = context.read<AuthProvider>().user?.role;
-              if (role == 'doctor') {
+          if (context.read<AuthProvider>().user?.role == 'doctor')
+            TextButton(
+              onPressed: () {
                 Navigator.pushReplacementNamed(
                     context, AppRoutes.doctorConsultationResultForm,
                     arguments: widget.args);
-              } else {
-                Navigator.pushReplacementNamed(
-                    context, AppRoutes.consultationResult,
-                    arguments: widget.args);
-              }
-            },
-            child: const Text('Akhiri Sesi',
-                style: TextStyle(
-                    color: Colors.red, fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(width: 8),
+              },
+              child: const Text('Akhiri Sesi',
+                  style: TextStyle(
+                      color: Colors.red, fontWeight: FontWeight.bold)),
+            )
+          else
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Only leave the room
+              },
+              child: const Text('Keluar Ruangan',
+                  style: TextStyle(
+                      color: Colors.red, fontWeight: FontWeight.bold)),
+            ),
           const SizedBox(width: 8),
         ],
       ),
@@ -199,8 +337,12 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
             child: ListView.builder(
               controller: _scrollController,
               padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
+              itemCount: _messages.length + ((_messages.isNotEmpty && _messages.last['sender_id'] == context.read<AuthProvider>().user?.id) ? 1 : 0),
               itemBuilder: (context, index) {
+                final showWaiting = _messages.isNotEmpty && _messages.last['sender_id'] == context.read<AuthProvider>().user?.id;
+                if (showWaiting && index == _messages.length) {
+                  return const chat_screen.WaitingIndicator();
+                }
                 final msg = _messages[index];
                 final senderId = msg['sender_id'] as int;
                 final isMe = senderId == context.read<AuthProvider>().user?.id;
@@ -225,11 +367,32 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        constraints:
-            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-        decoration: BoxDecoration(
+      child: GestureDetector(
+        onLongPress: isMe ? () {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Hapus Pesan?'),
+              content: const Text('Pesan ini akan ditarik (unsend) secara permanen.'),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+                TextButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await DatabaseHelper.instance.deleteMessage(msg['id'] as int);
+                    _loadMessages();
+                  }, 
+                  child: const Text('Tarik Pesan', style: TextStyle(color: Colors.red))
+                ),
+              ],
+            ),
+          );
+        } : null,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          constraints:
+              BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+          decoration: BoxDecoration(
             color: isMe ? const Color(0xFFE3F2FD) : Colors.white,
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(16),
@@ -286,6 +449,7 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
             )
           ],
         ),
+      ),
       ),
     );
   }
@@ -575,37 +739,123 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   String selectedMethod = 'Transfer Bank';
 
-  void _processPayment() {
-    // Simulasi memproses pembayaran
+  Future<void> _processPayment() async {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
+    bool isDialogShowing = true;
 
-    Future.delayed(const Duration(seconds: 2), () async {
-      Navigator.pop(context); // Tutup loading
+    try {
+      final cid = (widget.args['consultationId'] as num).toInt();
+      final doctor = widget.args['doctor'] as Map<String, dynamic>;
+      final fee = (doctor['consultation_fee'] as num?)?.toInt() ?? 50000;
+      final adminFee = 5000;
+      final total = fee + adminFee;
+      
+      // Hit Node.js backend
+      String baseUrl = 'http://localhost:3000';
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        baseUrl = 'http://10.0.2.2:3000';
+      }
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/payment/token'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'order_id': 'HALOPET-$cid-${DateTime.now().millisecondsSinceEpoch}',
+          'gross_amount': total,
+          'customer_details': {
+            'first_name': context.read<AuthProvider>().user?.name ?? 'Guest',
+            'email': context.read<AuthProvider>().user?.email ?? 'guest@example.com'
+          }
+        })
+      );
 
-      // Update status di provider/database (Simulasi)
-      try {
-        final cid = (widget.args['consultationId'] as num).toInt();
-        if (context.mounted) {
-          await context
-              .read<ConsultationProvider>()
-              .updateStatus(cid, 'scheduled');
-          ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Pembayaran Berhasil!')));
+      if (context.mounted && isDialogShowing) {
+        Navigator.pop(context); 
+        isDialogShowing = false;
+      }
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'success') {
+          final redirectUrl = data['redirect_url'];
+          final uri = Uri.parse(redirectUrl);
+          
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+            
+            // Tampilkan dialog konfirmasi pembayaran simulasi setelah browser ditutup/kembali ke app
+            if (context.mounted) {
+              _showSimulationDialog(cid);
+            }
+          } else {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal membuka halaman pembayaran')));
+            }
+          }
+        } else {
+          throw Exception(data['message'] ?? 'Gagal mendapatkan token');
         }
-      } catch (e) {
-        // ignore
+      } else {
+         throw Exception('Gagal menghubungi server');
       }
 
-      // Ke riwayat konsultasi
-      if (context.mounted) {
-        Navigator.pushNamedAndRemoveUntil(
-            context, AppRoutes.ownerConsultations, (r) => r.isFirst);
+    } catch (e) {
+      if (context.mounted && isDialogShowing) {
+        Navigator.pop(context); 
+        isDialogShowing = false;
       }
-    });
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+      }
+    }
+  }
+
+  void _showSimulationDialog(int cid) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Simulasi Pembayaran', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
+        content: const Text('Apakah Anda sudah menyelesaikan pembayaran di halaman Midtrans?\n\n(Karena ini menggunakan SQLite lokal, Anda harus mengkonfirmasi secara manual untuk melanjutkan)'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('Belum', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context); // Tutup dialog simulasi
+              
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => const Center(child: CircularProgressIndicator()),
+              );
+              
+              try {
+                if (context.mounted) {
+                  await context.read<ConsultationProvider>().updateStatus(cid, 'scheduled');
+                }
+              } catch (e) {
+                // ignore
+              }
+              
+              if (context.mounted) {
+                Navigator.pop(context); // Tutup loading
+                Navigator.pushReplacementNamed(context, AppRoutes.paymentSuccess, arguments: widget.args);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Sudah, Lanjut!', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -725,6 +975,74 @@ class _PaymentScreenState extends State<PaymentScreen> {
             if (isSelected)
               const Icon(Icons.check_circle, color: Color(0xFF2196F3)),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==== PAYMENT SUCCESS SCREEN ====
+class PaymentSuccessScreen extends StatelessWidget {
+  final Map<String, dynamic> args; // Needs consultationId, doctor, method, total, date
+  const PaymentSuccessScreen({super.key, required this.args});
+
+  @override
+  Widget build(BuildContext context) {
+    final doctor = args['doctor'] as Map<String, dynamic>? ?? {};
+    final fee = (doctor['consultation_fee'] as num?)?.toInt() ?? 50000;
+    final adminFee = 5000;
+    final total = fee + adminFee;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('Pembayaran Berhasil', style: TextStyle(color: Color(0xFF0F2646))),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Color(0xFF0F2646)),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.check_circle, color: Colors.green, size: 80),
+              const SizedBox(height: 16),
+              const Text('Pembayaran Anda Berhasil!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text('Rp $total', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF2196F3))),
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.picture_as_pdf),
+                label: const Text('Export Invoice PDF'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2196F3),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+                onPressed: () async {
+                  await pdf_gen.PdfInvoiceGenerator.generateAndShareInvoice(
+                    consultationId: (args['consultationId'] as num).toInt(),
+                    doctorName: doctor['name']?.toString() ?? 'Drh.',
+                    method: args['method']?.toString() ?? 'Chat',
+                    fee: fee,
+                    adminFee: adminFee,
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton(
+                child: const Text('Lihat Konsultasi'),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+                onPressed: () {
+                  Navigator.pushNamedAndRemoveUntil(context, AppRoutes.ownerConsultations, (r) => r.isFirst);
+                },
+              )
+            ],
+          ),
         ),
       ),
     );

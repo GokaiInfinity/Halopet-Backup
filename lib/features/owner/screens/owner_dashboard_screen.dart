@@ -13,6 +13,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/consultation_provider.dart';
 import '../../../providers/doctor_provider.dart';
 import '../../../providers/pet_provider.dart';
+import 'owner_prescription_list_screen.dart';
 
 class OwnerDashboardScreen extends StatefulWidget {
   const OwnerDashboardScreen({super.key});
@@ -132,13 +133,9 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildMenuIcon(Icons.chat, const Color(0xFFE8F5E9),
-                      const Color(0xFF4CAF50), 'Konsultasi\nOnline',
+                      const Color(0xFF4CAF50), 'Konsultasi\nMedis',
                       onTap: () => Navigator.pushNamed(
                           context, AppRoutes.consultationWizard)),
-                  _buildMenuIcon(Icons.calendar_month, const Color(0xFFE3F2FD),
-                      const Color(0xFF2196F3), 'Buat Jadwal\nKonsultasi',
-                      onTap: () =>
-                          Navigator.pushNamed(context, AppRoutes.doctorList)),
                   _buildMenuIcon(Icons.fact_check, const Color(0xFFFFF8E1),
                       const Color(0xFFFFC107), 'Skrining\nKondisi',
                       onTap: () {
@@ -147,6 +144,16 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                   _buildMenuIcon(Icons.local_hospital, const Color(0xFFF3E5F5),
                       const Color(0xFF9C27B0), 'Cari Klinik\nTerdekat',
                       onTap: () {}),
+                  _buildMenuIcon(Icons.medical_services, const Color(0xFFE0F7FA),
+                      const Color(0xFF00ACC1), 'Resep\nObat',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const OwnerPrescriptionListScreen(),
+                          ),
+                        );
+                      }),
                 ],
               ),
 
@@ -219,11 +226,16 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
               child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: const Color(0xFFFFF0D4),
-                    child: Icon(icon, color: const Color(0xFFFFA000), size: 32),
-                  ),
+                  (pet['photo']?.toString() ?? '').isNotEmpty
+                      ? CircleAvatar(
+                          radius: 28,
+                          backgroundImage: FileImage(File(pet['photo'].toString())),
+                        )
+                      : CircleAvatar(
+                          radius: 28,
+                          backgroundColor: const Color(0xFFFFF0D4),
+                          child: Icon(icon, color: const Color(0xFFFFA000), size: 32),
+                        ),
                   const SizedBox(height: 12),
                   Text(pet['name'],
                       style: const TextStyle(
@@ -392,7 +404,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                   children: [
                     const Icon(Icons.circle, size: 6, color: Colors.red),
                     const SizedBox(width: 6),
-                    Text(consult['schedule_date'] ?? 'Menunggu',
+                    Text(_formatDate(consult['schedule_date'] as String?),
                         style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -417,7 +429,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: const Text('Detail',
+                      child: const Text('Chat',
                           style: TextStyle(
                               color: Color(0xFF45A5C7),
                               fontSize: 12,
@@ -474,4 +486,17 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
       ),
     );
   }
+}
+
+String _formatDate(String? raw) {
+  if (raw == null || raw.isEmpty) return '-';
+  try {
+    final parts = raw.split(' ')[0].split('-');
+    if (parts.length == 3) {
+      if (parts[0].length == 4) { // yyyy-mm-dd
+        return '${parts[2]}-${parts[1]}-${parts[0]}';
+      }
+    }
+  } catch (_) {}
+  return raw;
 }

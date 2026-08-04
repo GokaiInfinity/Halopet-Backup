@@ -4,9 +4,11 @@ import '../../app/routes.dart';
 import '../../core/widgets/role_scaffolds.dart';
 import '../../providers/consultation_provider.dart';
 import 'package:intl/intl.dart';
-
 class AdminConsultationsScreen extends StatefulWidget {
-  const AdminConsultationsScreen({super.key});
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  const AdminConsultationsScreen({super.key, this.startDate, this.endDate});
 
   @override
   State<AdminConsultationsScreen> createState() =>
@@ -18,7 +20,10 @@ class _AdminConsultationsScreenState extends State<AdminConsultationsScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ConsultationProvider>().loadAll();
+      context.read<ConsultationProvider>().loadAll(
+        startDate: widget.startDate,
+        endDate: widget.endDate,
+      );
     });
   }
 
@@ -59,13 +64,13 @@ class _AdminConsultationsScreenState extends State<AdminConsultationsScreen> {
               final status = consultation['status'] as String? ?? 'Menunggu';
               final rawDate = consultation['created_at'] as String?;
 
-              String formattedDate = '';
+              String formattedDateText = '';
               if (rawDate != null) {
                 try {
                   final dt = DateTime.parse(rawDate);
-                  formattedDate = DateFormat('dd MMM yyyy, HH:mm').format(dt);
+                  formattedDateText = '${dt.day.toString().padLeft(2, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
                 } catch (e) {
-                  formattedDate = rawDate;
+                  formattedDateText = rawDate;
                 }
               }
 
@@ -92,7 +97,7 @@ class _AdminConsultationsScreenState extends State<AdminConsultationsScreen> {
                       Text('Keluhan: $complaint'),
                       const SizedBox(height: 4),
                       Text(
-                        formattedDate,
+                        formattedDateText,
                         style: const TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                     ],
@@ -133,13 +138,20 @@ class _AdminConsultationsScreenState extends State<AdminConsultationsScreen> {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'menunggu':
+      case 'waiting':
+      case 'scheduled':
         return Colors.orange;
       case 'berlangsung':
       case 'aktif':
+      case 'in_progress':
+      case 'accepted':
         return Colors.blue;
       case 'selesai':
+      case 'finished':
+      case 'completed':
         return Colors.green;
       case 'dibatalkan':
+      case 'cancelled':
         return Colors.red;
       default:
         return Colors.grey;

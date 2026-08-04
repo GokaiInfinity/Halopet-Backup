@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -23,9 +24,12 @@ class PetFormScreen extends StatefulWidget {
 class _PetFormScreenState extends State<PetFormScreen> {
   final form = GlobalKey<FormState>();
   late final TextEditingController name, breed, age, weight, tanggalLahir, warnaCiri;
+  late TextEditingController microchipId;
+  String bloodType = 'Tidak Tahu';
   String species = 'Kucing';
   String gender = 'Jantan';
   String statusSteril = 'Belum Steril';
+  String _photoPath = '';
 
   List<String> alergi = [];
   List<Map<String, String>> riwayatVaksin = [];
@@ -43,10 +47,13 @@ class _PetFormScreenState extends State<PetFormScreen> {
     weight = TextEditingController(text: '${p?['weight'] ?? ''}');
     tanggalLahir = TextEditingController(text: '${p?['tanggal_lahir'] ?? ''}');
     warnaCiri = TextEditingController(text: '${p?['warna_ciri'] ?? ''}');
+    microchipId = TextEditingController(text: '${p?['microchip_id'] ?? ''}');
+    bloodType = p != null && p['blood_type'] != null && p['blood_type'].toString().isNotEmpty ? p['blood_type'].toString() : 'Tidak Tahu';
     
     species = p != null ? '${p['species'] ?? 'Kucing'}' : 'Kucing';
     gender = p != null ? '${p['gender'] ?? 'Jantan'}' : 'Jantan';
     statusSteril = p != null ? '${p['status_steril'] ?? 'Belum Steril'}' : 'Belum Steril';
+    _photoPath = p != null ? '${p['photo'] ?? ''}' : '';
 
     final alergiStr = '${p?['alergi'] ?? ''}';
     if (alergiStr.isNotEmpty) {
@@ -62,7 +69,9 @@ class _PetFormScreenState extends State<PetFormScreen> {
           setState(() {
             riwayatVaksin = pProvider.vaccinations.map((e) => {
               'name': e['name'].toString(),
-              'date': e['date'].toString()
+              'date': e['date'].toString(),
+              'brand': e['brand']?.toString() ?? '',
+              'batch_number': e['batch_number']?.toString() ?? ''
             }).toList();
             riwayatPenyakit = pProvider.diseases.map((e) => {
               'name': e['name'].toString(),
@@ -91,7 +100,9 @@ class _PetFormScreenState extends State<PetFormScreen> {
       'warna_ciri': warnaCiri.text,
       'status_steril': statusSteril,
       'alergi': alergi.join(', '),
-      'photo': widget.pet?['photo'] ?? ''
+      'microchip_id': microchipId.text,
+      'blood_type': bloodType,
+      'photo': _photoPath
     }, id: widget.pet?['id'] as int?);
 
     if (savedId != null) {
@@ -103,6 +114,8 @@ class _PetFormScreenState extends State<PetFormScreen> {
           'pet_id': savedId,
           'name': v['name'],
           'date': v['date'],
+          'brand': v['brand'],
+          'batch_number': v['batch_number'],
           'status': 'Aktif'
         });
       }
@@ -150,7 +163,7 @@ class _PetFormScreenState extends State<PetFormScreen> {
     );
   }
 
-  Widget _buildListField<T>(String title, List<T> items, VoidCallback onAddPressed, Function(int) onRemove, String Function(T) labelBuilder) {
+  Widget _buildListField<T>(String title, List<T> items, VoidCallback onAddPressed, Function(int) onRemove, String Function(T) labelBuilder, {Function(int)? onEdit}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -172,9 +185,10 @@ class _PetFormScreenState extends State<PetFormScreen> {
                     : Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: items.asMap().entries.map((entry) => Chip(
+                        children: items.asMap().entries.map((entry) => InputChip(
                           label: Text(labelBuilder(entry.value)),
                           onDeleted: () => onRemove(entry.key),
+                          onPressed: onEdit != null ? () => onEdit(entry.key) : null,
                           backgroundColor: const Color(0xFFE6F4F8),
                           deleteIconColor: const Color(0xFF45A5C7),
                           labelStyle: const TextStyle(color: Color(0xFF0F2646), fontSize: 12),
@@ -194,8 +208,8 @@ class _PetFormScreenState extends State<PetFormScreen> {
     );
   }
 
-  void _showAddItemDialog(String title, Function(String) onAdd) {
-    final controller = TextEditingController();
+  void _showAddItemDialog(String title, Function(String) onSave, {String? initialValue}) {
+    final controller = TextEditingController(text: initialValue);
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -206,7 +220,7 @@ class _PetFormScreenState extends State<PetFormScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Tambah $title', textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
+              Text(initialValue != null ? 'Edit $title' : 'Tambah $title', textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
               const SizedBox(height: 24),
               TextField(
                 controller: controller,
@@ -230,7 +244,7 @@ class _PetFormScreenState extends State<PetFormScreen> {
               ElevatedButton(
                 onPressed: () {
                   if (controller.text.isNotEmpty) {
-                    onAdd(controller.text);
+                    onSave(controller.text);
                     Navigator.pop(ctx);
                   }
                 },
@@ -248,9 +262,11 @@ class _PetFormScreenState extends State<PetFormScreen> {
     );
   }
 
-  void _showAddMapDialog(String title, Function(Map<String, String>) onAdd) {
-    final nameController = TextEditingController();
-    final dateController = TextEditingController();
+  void _showAddMapDialog(String title, Function(Map<String, String>) onSave, {Map<String, String>? initialValue}) {
+    final nameController = TextEditingController(text: initialValue?['name'] ?? '');
+    final dateController = TextEditingController(text: initialValue?['date'] ?? '');
+    final brandController = TextEditingController(text: initialValue?['brand'] ?? '');
+    final batchController = TextEditingController(text: initialValue?['batch_number'] ?? '');
 
     showDialog(
       context: context,
@@ -262,7 +278,7 @@ class _PetFormScreenState extends State<PetFormScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Tambah $title', textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
+              Text(initialValue != null ? 'Edit $title' : 'Tambah $title', textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
               const SizedBox(height: 24),
               TextField(
                 controller: nameController,
@@ -300,6 +316,28 @@ class _PetFormScreenState extends State<PetFormScreen> {
                   focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF45A5C7))),
                 ),
               ),
+              if (title == 'Riwayat Vaksinasi') ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: brandController,
+                  decoration: InputDecoration(
+                    hintText: 'Merek Vaksin (opsional)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF45A5C7))),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0E5EC))),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF45A5C7))),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: batchController,
+                  decoration: InputDecoration(
+                    hintText: 'Nomor Batch (opsional)',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF45A5C7))),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0E5EC))),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF45A5C7))),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerRight,
@@ -312,10 +350,15 @@ class _PetFormScreenState extends State<PetFormScreen> {
               ElevatedButton(
                 onPressed: () {
                   if (nameController.text.isNotEmpty && dateController.text.isNotEmpty) {
-                    onAdd({
+                    final data = {
                       'name': nameController.text,
                       'date': dateController.text,
-                    });
+                    };
+                    if (title == 'Riwayat Vaksinasi') {
+                      if (brandController.text.isNotEmpty) data['brand'] = brandController.text;
+                      if (batchController.text.isNotEmpty) data['batch_number'] = batchController.text;
+                    }
+                    onSave(data);
                     Navigator.pop(ctx);
                   }
                 },
@@ -340,8 +383,55 @@ class _PetFormScreenState extends State<PetFormScreen> {
       body: Form(
           key: form,
           child: ListView(padding: const EdgeInsets.all(20), children: [
-            const Center(
-                child: AvatarInitials('Pet', radius: 46, icon: Icons.pets)),
+            Center(
+              child: Stack(
+                children: [
+                  Container(
+                    width: 92,
+                    height: 92,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFE6F4F8), width: 3),
+                    ),
+                    child: _photoPath.isNotEmpty
+                        ? ClipOval(
+                            child: Image.file(
+                              File(_photoPath),
+                              width: 92,
+                              height: 92,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : const CircleAvatar(
+                            radius: 46,
+                            backgroundColor: Color(0xFFE8E2D6),
+                            child: Icon(Icons.pets, color: Colors.white, size: 46),
+                          ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: InkWell(
+                      onTap: () async {
+                        final picker = ImagePicker();
+                        final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+                        if (pickedFile != null) {
+                          setState(() => _photoPath = pickedFile.path);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF45A5C7),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             
             _buildSectionTitle('Identitas'),
             TextFormField(
@@ -415,6 +505,19 @@ class _PetFormScreenState extends State<PetFormScreen> {
               decoration: const InputDecoration(labelText: 'Warna / Ciri Fisik'),
             ),
             const SizedBox(height: 14),
+            TextField(
+              controller: microchipId,
+              decoration: const InputDecoration(labelText: 'Nomor Microchip (opsional)'),
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<String>(
+                value: bloodType,
+                decoration: const InputDecoration(labelText: 'Golongan Darah (opsional)'),
+                items: ['Tidak Tahu', 'DEA 1.1', 'DEA 1.2', 'DEA 3', 'DEA 4', 'DEA 5', 'DEA 7', 'Type A', 'Type B', 'Type AB']
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    .toList(),
+                onChanged: (v) => setState(() => bloodType = v!)),
+            const SizedBox(height: 14),
             Row(
               children: [
                 Expanded(
@@ -433,7 +536,8 @@ class _PetFormScreenState extends State<PetFormScreen> {
               riwayatVaksin, 
               () => _showAddMapDialog('Riwayat Vaksinasi', (val) => setState(() => riwayatVaksin.add(val))), 
               (idx) => setState(() => riwayatVaksin.removeAt(idx)), 
-              (item) => '${item['name']} (${item['date']})'
+              (item) => '${item['name']} (${item['date']})',
+              onEdit: (idx) => _showAddMapDialog('Riwayat Vaksinasi', (val) => setState(() => riwayatVaksin[idx] = val), initialValue: riwayatVaksin[idx])
             ),
             const SizedBox(height: 16),
             _buildListField<String>(
@@ -441,7 +545,8 @@ class _PetFormScreenState extends State<PetFormScreen> {
               alergi, 
               () => _showAddItemDialog('Alergi', (val) => setState(() => alergi.add(val))), 
               (idx) => setState(() => alergi.removeAt(idx)), 
-              (item) => item
+              (item) => item,
+              onEdit: (idx) => _showAddItemDialog('Alergi', (val) => setState(() => alergi[idx] = val), initialValue: alergi[idx])
             ),
             const SizedBox(height: 16),
             _buildListField<Map<String, String>>(
@@ -449,7 +554,8 @@ class _PetFormScreenState extends State<PetFormScreen> {
               riwayatPenyakit, 
               () => _showAddMapDialog('Riwayat Penyakit', (val) => setState(() => riwayatPenyakit.add(val))), 
               (idx) => setState(() => riwayatPenyakit.removeAt(idx)), 
-              (item) => '${item['name']} (${item['date']})'
+              (item) => '${item['name']} (${item['date']})',
+              onEdit: (idx) => _showAddMapDialog('Riwayat Penyakit', (val) => setState(() => riwayatPenyakit[idx] = val), initialValue: riwayatPenyakit[idx])
             ),
             
             const SizedBox(height: 32),

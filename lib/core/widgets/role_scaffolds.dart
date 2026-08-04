@@ -154,10 +154,11 @@ class DoctorScaffold extends StatelessWidget {
                 AppRoutes.doctorPatients,
                 AppRoutes.doctorSchedule,
                 AppRoutes.doctorConsultations,
-                AppRoutes.doctorProfile
+                AppRoutes.doctorSettings
               ][i];
-              if (ModalRoute.of(context)?.settings.name != route)
+              if (ModalRoute.of(context)?.settings.name != route) {
                 Navigator.pushNamedAndRemoveUntil(context, route, (r) => false);
+              }
             },
             destinations: const [
               NavigationDestination(
@@ -175,13 +176,13 @@ class DoctorScaffold extends StatelessWidget {
               NavigationDestination(
                   icon: Icon(Icons.chat_bubble_outline),
                   selectedIcon: Icon(Icons.chat_bubble),
-                  label: 'Pesan'),
-          NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: 'Akun'),
-        ]),
-  ));
+                  label: 'Konsultasi'),
+              NavigationDestination(
+                  icon: Icon(Icons.person_outline),
+                  selectedIcon: Icon(Icons.person),
+                  label: 'Akun'),
+            ]),
+      ));
 }
 
 class AdminScaffold extends StatelessWidget {

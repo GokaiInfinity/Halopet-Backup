@@ -11,7 +11,7 @@ class ConsultationProvider extends ChangeNotifier {
     loading = true;
     notifyListeners();
     try {
-      items = await DatabaseHelper.instance.getOwnerConsultations(ownerId);
+      items = List.from(await DatabaseHelper.instance.getOwnerConsultations(ownerId));
       error = null;
     } catch (e) {
       error = '$e';
@@ -20,11 +20,14 @@ class ConsultationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadAll() async {
+  Future<void> loadAll({DateTime? startDate, DateTime? endDate}) async {
     loading = true;
     notifyListeners();
     try {
-      items = await DatabaseHelper.instance.getAllConsultations();
+      items = List.from(await DatabaseHelper.instance.getAllConsultations(
+        startDate: startDate,
+        endDate: endDate,
+      ));
       error = null;
     } catch (e) {
       error = '$e';
@@ -37,7 +40,7 @@ class ConsultationProvider extends ChangeNotifier {
     loading = true;
     notifyListeners();
     try {
-      items = await DatabaseHelper.instance.getDoctorConsultations(doctorId);
+      items = List.from(await DatabaseHelper.instance.getDoctorConsultations(doctorId));
       error = null;
     } catch (e) {
       error = '$e';
@@ -81,11 +84,23 @@ class ConsultationProvider extends ChangeNotifier {
 
   Future<void> setStatus(int id, String status) async {
     await DatabaseHelper.instance.updateConsultationStatus(id, status);
+    final index = items.indexWhere((c) => c['id'] == id);
+    if (index != -1) {
+      final updated = Map<String, Object?>.from(items[index]);
+      updated['status'] = status;
+      items[index] = updated;
+    }
     notifyListeners();
   }
 
   Future<void> updateStatus(int id, String status) async {
     await DatabaseHelper.instance.updateConsultationStatus(id, status);
+    final index = items.indexWhere((c) => c['id'] == id);
+    if (index != -1) {
+      final updated = Map<String, Object?>.from(items[index]);
+      updated['status'] = status;
+      items[index] = updated;
+    }
     notifyListeners();
   }
 

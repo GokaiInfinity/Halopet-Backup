@@ -49,7 +49,8 @@ class OwnerProfileScreen extends StatelessWidget {
                   fontWeight: FontWeight.bold, color: Color(0xFF7A93AA))),
           const SizedBox(height: 8),
           _buildSettingsItem(Icons.notifications_none, 'Pengaturan Notifikasi',
-              'Kelola preferensi notifikasi'),
+              'Kelola preferensi notifikasi',
+              onTap: () => Navigator.pushNamed(context, AppRoutes.notificationSettings)),
           const SizedBox(height: 24),
           const Text('Lainnya',
               style: TextStyle(

@@ -16,6 +16,13 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  void setLoading(bool value) {
+    if (loading != value) {
+      loading = value;
+      notifyListeners();
+    }
+  }
+
   Future<void> restoreSession() async {
     final prefs = await SharedPreferences.getInstance();
     final id = prefs.getInt('user_id');

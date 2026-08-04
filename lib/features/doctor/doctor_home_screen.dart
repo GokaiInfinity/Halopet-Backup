@@ -21,6 +21,7 @@ class DoctorDashboardScreen extends StatefulWidget {
 
 class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
   Map<String, Object?>? doctor;
+  List<Map<String, dynamic>> _todayEvents = [];
 
   @override
   void initState() {
@@ -35,6 +36,11 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
       await context
           .read<ConsultationProvider>()
           .loadDoctor(doctor!['id'] as int);
+          
+      final allEvents = await DatabaseHelper.instance.getDoctorCalendarEvents(doctor!['id'] as int);
+      final now = DateTime.now();
+      final todayString = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      _todayEvents = allEvents.where((e) => e['date'] == todayString).toList();
     }
     if (mounted) setState(() {});
   }
@@ -66,6 +72,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
               AppRoutes.doctorHome,
               AppRoutes.doctorPatients,
               AppRoutes.doctorSchedule,
+              AppRoutes.doctorConsultations,
               AppRoutes.doctorSettings
             ][i];
             if (ModalRoute.of(context)?.settings.name != route) {
@@ -86,6 +93,10 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
               selectedIcon: Icon(Icons.calendar_month),
               label: 'Jadwal'),
           NavigationDestination(
+              icon: Icon(Icons.chat_bubble_outline),
+              selectedIcon: Icon(Icons.chat_bubble),
+              label: 'Konsultasi'),
+          NavigationDestination(
               icon: Icon(Icons.person_outline),
               selectedIcon: Icon(Icons.person),
               label: 'Akun'),
@@ -105,7 +116,7 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Selamat pagi, ${user.name.split(' ').first} 👋',
+                            'Selamat pagi, ${user.name} 👋',
                             style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w900,
@@ -195,7 +206,11 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                             onTap: () {
                               Navigator.pushNamed(
                                   context, AppRoutes.consultationRoom,
-                                  arguments: {'consultation_id': c['id']});
+                                  arguments: {
+                                    'consultation_id': c['id'],
+                                    'chat_title': petName,
+                                    'chat_subtitle': ownerName,
+                                  });
                             },
                             child: Container(
                               margin: const EdgeInsets.only(bottom: 12),
@@ -262,13 +277,26 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Dummy Schedule List
-                  _buildScheduleItem('09:00', 'Milo', 'Golden Retriever',
-                      'Konsultasi Online', 'Berlangsung', Colors.green),
-                  _buildScheduleItem('10:00', 'Luna', 'Kucing Anggora',
-                      'Konsultasi Online', 'Menunggu', Colors.orange),
-                  _buildScheduleItem('11:00', 'Max', 'Kucing Persia', 'Kontrol',
-                      'Terjadwal', Colors.blue),
+                  // Schedule List
+                  if (_todayEvents.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 32),
+                      child: Center(
+                        child: Text(
+                          'Tidak ada jadwal untuk hari ini.',
+                          style: TextStyle(color: Color(0xFF7A93AA)),
+                        ),
+                      ),
+                    )
+                  else
+                    ..._todayEvents.map((e) {
+                      final status = (e['status'] as String).toLowerCase();
+                      MaterialColor statusColor = Colors.blue;
+                      if (status == 'berlangsung') statusColor = Colors.green;
+                      if (status == 'menunggu' || status == 'pending') statusColor = Colors.orange;
+
+                      return _buildScheduleItem(e, statusColor);
+                    }).toList(),
 
                   const SizedBox(height: 32),
 
@@ -324,8 +352,12 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     );
   }
 
-  Widget _buildScheduleItem(String time, String petName, String breed,
-      String type, String status, MaterialColor color) {
+  Widget _buildScheduleItem(Map<String, dynamic> event, MaterialColor color) {
+    final time = event['time'] as String;
+    final petName = event['pet'] as String;
+    final breed = event['breed'] as String;
+    final type = event['type'] as String;
+    final status = event['status'] as String;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -338,9 +370,16 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           hoverColor: Colors.blue.withOpacity(0.05),
-          onTap: () => Navigator.pushNamed(
+          onTap: () {
+            final now = DateTime.now();
+            final dateString = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+            Navigator.pushNamed(
               context, AppRoutes.doctorAppointmentDetail,
-              arguments: '$time, 20 Mei 2025'),
+              arguments: {
+                'date': dateString,
+                'event': event,
+              });
+          },
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(

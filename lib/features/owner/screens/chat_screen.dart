@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -23,21 +25,41 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   List<Map<String, Object?>> messages = [];
   final text = TextEditingController();
+  Timer? _timer;
+
   @override
   void initState() {
     super.initState();
     load();
+    _timer = Timer.periodic(const Duration(seconds: 2), (_) {
+      load();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    text.dispose();
+    super.dispose();
   }
 
   Future<void> load() async {
-    messages = await DatabaseHelper.instance
-        .getMessages(widget.consultation['id'] as int);
-    if (mounted) setState(() {});
+    final cid = widget.consultation['id'] as int? ?? widget.consultation['consultation_id'] as int? ?? 0;
+    final newMessages = await DatabaseHelper.instance.getMessages(cid);
+    if (mounted) {
+      if (messages.length != newMessages.length) {
+        setState(() {
+          messages = newMessages;
+        });
+      }
+    }
   }
 
   Future<void> send() async {
     if (text.text.trim().isEmpty) return;
-    await DatabaseHelper.instance.addMessage(widget.consultation['id'] as int,
+    final cid = widget.consultation['id'] as int? ?? widget.consultation['consultation_id'] as int? ?? 0;
+    await DatabaseHelper.instance.addMessage(
+        cid,
         context.read<AuthProvider>().user!.id, text.text.trim());
     text.clear();
     await load();
@@ -49,6 +71,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (pickedFile != null) {
       final bytes = await pickedFile.readAsBytes();
       final base64String = base64Encode(bytes);
+
       await DatabaseHelper.instance.addMessage(widget.consultation['id'] as int,
           context.read<AuthProvider>().user!.id, '[IMAGE]$base64String');
       await load();
@@ -77,8 +100,12 @@ class _ChatScreenState extends State<ChatScreen> {
                       icon: Icons.forum_outlined)
                   : ListView.builder(
                       padding: const EdgeInsets.all(16),
-                      itemCount: messages.length,
+                      itemCount: messages.length + ((messages.isNotEmpty && messages.last['sender_id'] == me && widget.consultation['status'] != 'finished' && widget.consultation['status'] != 'selesai') ? 1 : 0),
                       itemBuilder: (_, i) {
+                        final showWaiting = messages.isNotEmpty && messages.last['sender_id'] == me && widget.consultation['status'] != 'finished' && widget.consultation['status'] != 'selesai';
+                        if (showWaiting && i == messages.length) {
+                          return const WaitingIndicator();
+                        }
                         final m = messages[i];
                         final mine = m['sender_id'] == me;
                         final msgText = m['message'].toString();
@@ -87,34 +114,55 @@ class _ChatScreenState extends State<ChatScreen> {
                             alignment: mine
                                 ? Alignment.centerRight
                                 : Alignment.centerLeft,
-                            child: Container(
-                                margin: const EdgeInsets.only(bottom: 9),
-                                padding: isImage
-                                    ? EdgeInsets.zero
-                                    : const EdgeInsets.symmetric(
-                                        horizontal: 14, vertical: 11),
-                                constraints:
-                                    const BoxConstraints(maxWidth: 290),
-                                decoration: BoxDecoration(
-                                    color: isImage
-                                        ? Colors.transparent
-                                        : (mine
-                                            ? AppColors.primary
-                                            : Colors.white),
-                                    borderRadius: BorderRadius.circular(16)),
-                                child: isImage
-                                    ? ClipRRect(
-                                        borderRadius: BorderRadius.circular(16),
-                                        child: Image.memory(
-                                          base64Decode(msgText.substring(7)),
-                                          fit: BoxFit.cover,
+                            child: GestureDetector(
+                                onLongPress: mine ? () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text('Hapus Pesan?'),
+                                      content: const Text('Pesan ini akan ditarik (unsend) secara permanen.'),
+                                      actions: [
+                                        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+                                        TextButton(
+                                          onPressed: () async {
+                                            Navigator.pop(context);
+                                            await DatabaseHelper.instance.deleteMessage(m['id'] as int);
+                                            await load();
+                                          }, 
+                                          child: const Text('Tarik Pesan', style: TextStyle(color: Colors.red))
                                         ),
-                                      )
-                                    : Text(msgText,
-                                        style: TextStyle(
-                                            color: mine
-                                                ? Colors.white
-                                                : AppColors.text))));
+                                      ],
+                                    ),
+                                  );
+                                } : null,
+                                child: Container(
+                                    margin: const EdgeInsets.only(bottom: 9),
+                                    padding: isImage
+                                        ? EdgeInsets.zero
+                                        : const EdgeInsets.symmetric(
+                                            horizontal: 14, vertical: 11),
+                                    constraints:
+                                        const BoxConstraints(maxWidth: 290),
+                                    decoration: BoxDecoration(
+                                        color: isImage
+                                            ? Colors.transparent
+                                            : (mine
+                                                ? AppColors.primary
+                                                : Colors.white),
+                                        borderRadius: BorderRadius.circular(16)),
+                                    child: isImage
+                                        ? ClipRRect(
+                                            borderRadius: BorderRadius.circular(16),
+                                            child: Image.memory(
+                                              base64Decode(msgText.substring(7)),
+                                              fit: BoxFit.cover,
+                                            ),
+                                          )
+                                        : Text(msgText,
+                                            style: TextStyle(
+                                                color: mine
+                                                    ? Colors.white
+                                                    : AppColors.text)))));
                       })),
           SafeArea(
               top: false,
@@ -139,5 +187,61 @@ class _ChatScreenState extends State<ChatScreen> {
                         onPressed: send, icon: const Icon(Icons.send))
                   ])))
         ]));
+  }
+}
+
+class WaitingIndicator extends StatefulWidget {
+  const WaitingIndicator({super.key});
+  @override
+  State<WaitingIndicator> createState() => _WaitingIndicatorState();
+}
+
+class _WaitingIndicatorState extends State<WaitingIndicator> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat();
+  }
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 9, top: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (index) {
+            return AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: (math.sin((_controller.value * 2 * math.pi) - (index * math.pi / 3)) + 1) / 2 * 0.7 + 0.3,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(
+                      color: AppColors.muted,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                );
+              },
+            );
+          }),
+        ),
+      ),
+    );
   }
 }

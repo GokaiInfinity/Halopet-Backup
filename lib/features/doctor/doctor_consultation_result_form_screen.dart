@@ -19,7 +19,12 @@ class _DoctorConsultationResultFormScreenState
   final _adviceController = TextEditingController();
   final _warningController = TextEditingController();
   final _prescriptionNotesController = TextEditingController();
+  final _temperatureController = TextEditingController();
+  final _heartRateController = TextEditingController();
+  final _respiratoryRateController = TextEditingController();
+  final _weightController = TextEditingController();
   String? _controlDecision;
+  bool _isControl = false;
 
   List<Map<String, TextEditingController>> _medicines = [];
   bool _isLoading = false;
@@ -27,6 +32,7 @@ class _DoctorConsultationResultFormScreenState
   @override
   void initState() {
     super.initState();
+    _isControl = widget.args['is_control'] == 1;
     _addMedicine(); // Start with one empty medicine row
   }
 
@@ -54,6 +60,10 @@ class _DoctorConsultationResultFormScreenState
         'advice': _adviceController.text.trim(),
         'warning_signs': _warningController.text.trim(),
         'control_decision': _controlDecision ?? '',
+        'temperature': double.tryParse(_temperatureController.text) ?? 0.0,
+        'heart_rate': int.tryParse(_heartRateController.text) ?? 0,
+        'respiratory_rate': int.tryParse(_respiratoryRateController.text) ?? 0,
+        'weight_at_visit': double.tryParse(_weightController.text) ?? 0.0,
       });
 
       // Save prescription if filled
@@ -111,8 +121,47 @@ class _DoctorConsultationResultFormScreenState
               child: ListView(
                 padding: const EdgeInsets.all(24),
                 children: [
+                  _buildSectionTitle('Pemeriksaan Fisik & Tanda Vital'),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildTextField('Suhu Tubuh (°C)', _temperatureController, keyboardType: TextInputType.number),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildTextField('Berat Badan (kg)', _weightController, keyboardType: TextInputType.number),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildTextField('Detak Jantung (bpm)', _heartRateController, keyboardType: TextInputType.number),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildTextField('Pernapasan (rpm)', _respiratoryRateController, keyboardType: TextInputType.number),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
                   _buildSectionTitle('Diagnosis & Saran'),
-                  if (widget.args['is_control'] == 1) ...[
+                  CheckboxListTile(
+                    title: const Text('Tandai sebagai Konsultasi Kontrol', style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: const Text('Pilih jika ini adalah kunjungan lanjutan dari perawatan sebelumnya.'),
+                    value: _isControl,
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    onChanged: (val) {
+                      setState(() {
+                        _isControl = val ?? false;
+                        if (!_isControl) _controlDecision = null;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  if (_isControl) ...[
                     DropdownButtonFormField<String>(
                       value: _controlDecision,
                       decoration: const InputDecoration(
@@ -241,10 +290,11 @@ class _DoctorConsultationResultFormScreenState
   }
 
   Widget _buildTextField(String label, TextEditingController controller,
-      {bool required = true, int maxLines = 1}) {
+      {bool required = true, int maxLines = 1, TextInputType? keyboardType}) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
+      keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
         alignLabelWithHint: true,

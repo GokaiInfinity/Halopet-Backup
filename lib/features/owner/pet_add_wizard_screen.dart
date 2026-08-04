@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -26,6 +27,40 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
   final PageController _pageController = PageController();
   final TextEditingController _birthDateController = TextEditingController();
   final TextEditingController _ageController = TextEditingController();
+
+  List<String> _dogBreeds = [];
+  List<String> _catBreeds = [];
+  bool _isLoadingBreeds = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBreeds();
+  }
+
+  Future<void> _fetchBreeds() async {
+    try {
+      final dogRes = await http.get(Uri.parse('https://api.thedogapi.com/v1/breeds'));
+      final catRes = await http.get(Uri.parse('https://api.thecatapi.com/v1/breeds'));
+      
+      if (dogRes.statusCode == 200) {
+        final List<dynamic> data = json.decode(dogRes.body);
+        _dogBreeds = data.map((e) => e['name'].toString()).toList();
+      }
+      if (catRes.statusCode == 200) {
+        final List<dynamic> data = json.decode(catRes.body);
+        _catBreeds = data.map((e) => e['name'].toString()).toList();
+      }
+    } catch (e) {
+      // Ignore errors for mockup
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingBreeds = false;
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -67,6 +102,8 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
   String gender = 'Jantan';
   String petPhoto = '';
   List<String> additionalPhotos = [];
+  String microchipId = '';
+  String bloodType = 'Tidak Tahu';
 
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
@@ -165,7 +202,9 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
         'warna_ciri': colorMarks,
         'status_steril': sterilized,
         'alergi': alergi.join(', '),
-        'additional_photos': jsonEncode(additionalPhotos),
+        'additional_photos': json.encode(additionalPhotos),
+        'microchip_id': microchipId,
+        'blood_type': bloodType,
       });
 
       if (savedId != null) {
@@ -647,21 +686,51 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          const Text('Ras',
-              style: TextStyle(
-                  fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Ras',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
+              if (_isLoadingBreeds)
+                const SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+            ],
+          ),
           const SizedBox(height: 8),
-          TextFormField(
-            decoration: InputDecoration(
-              hintText: 'Contoh: Golden Retriever',
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE0E5EC))),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFFE0E5EC))),
-            ),
-            onSaved: (v) => breed = v ?? '',
+          Autocomplete<String>(
+            optionsBuilder: (TextEditingValue textEditingValue) {
+              final options = species == 'Anjing' ? _dogBreeds : _catBreeds;
+              if (textEditingValue.text.isEmpty) {
+                return options;
+              }
+              return options.where((String option) {
+                return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+              });
+            },
+            onSelected: (String selection) {
+              breed = selection;
+            },
+            fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+              return TextFormField(
+                controller: controller,
+                focusNode: focusNode,
+                decoration: InputDecoration(
+                  hintText: species == 'Anjing' ? 'Contoh: Golden Retriever' : 'Contoh: Persian',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE0E5EC))),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE0E5EC))),
+                ),
+                onSaved: (v) => breed = v ?? '',
+                onChanged: (v) => breed = v,
+              );
+            },
           ),
           const SizedBox(height: 20),
           const Text('Jenis Kelamin',
@@ -809,6 +878,46 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
                   child: _buildChoiceChip('Sudah Steril', sterilized,
                       (val) => setState(() => sterilized = val))),
             ],
+          ),
+          const SizedBox(height: 20),
+          const Text('Microchip ID (Opsional)',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
+          const SizedBox(height: 8),
+          TextFormField(
+            decoration: InputDecoration(
+              hintText: 'Contoh: 900123456789012',
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE0E5EC))),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE0E5EC))),
+            ),
+            onSaved: (v) => microchipId = v ?? '',
+          ),
+          const SizedBox(height: 20),
+          const Text('Golongan Darah',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: Color(0xFF0F2646))),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: bloodType,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE0E5EC))),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFE0E5EC))),
+            ),
+            items: ['Tidak Tahu', 'DEA 1.1 (Anjing)', 'A (Kucing)', 'B (Kucing)', 'AB (Kucing)']
+                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .toList(),
+            onChanged: (val) {
+              if (val != null) setState(() => bloodType = val);
+            },
+            onSaved: (v) => bloodType = v ?? 'Tidak Tahu',
           ),
         ],
       ),

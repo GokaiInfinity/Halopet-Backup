@@ -3,10 +3,47 @@ import 'package:provider/provider.dart';
 
 import '../../app/routes.dart';
 import '../../providers/auth_provider.dart';
+import '../../database/database_helper.dart';
 
 // ==== MOCKUP 12: DAFTAR PASIEN ====
-class DoctorPatientListScreen extends StatelessWidget {
+class DoctorPatientListScreen extends StatefulWidget {
   const DoctorPatientListScreen({super.key});
+
+  @override
+  State<DoctorPatientListScreen> createState() => _DoctorPatientListScreenState();
+}
+
+class _DoctorPatientListScreenState extends State<DoctorPatientListScreen> {
+  List<Map<String, dynamic>> _patients = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPatients();
+  }
+
+  Future<void> _loadPatients() async {
+    final user = context.read<AuthProvider>().user;
+    if (user != null) {
+      final doctor = await DatabaseHelper.instance.getDoctorByUser(user.id);
+      if (doctor != null) {
+        final patients = await DatabaseHelper.instance.getDoctorPatients(doctor['id'] as int);
+        if (mounted) {
+          setState(() {
+            _patients = patients;
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+    }
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +56,7 @@ class DoctorPatientListScreen extends StatelessWidget {
             AppRoutes.doctorHome,
             AppRoutes.doctorPatients,
             AppRoutes.doctorSchedule,
+            AppRoutes.doctorConsultations,
             AppRoutes.doctorSettings
           ][i];
           if (ModalRoute.of(context)?.settings.name != route) {
@@ -38,6 +76,10 @@ class DoctorPatientListScreen extends StatelessWidget {
               icon: Icon(Icons.calendar_month_outlined),
               selectedIcon: Icon(Icons.calendar_month),
               label: 'Jadwal'),
+          NavigationDestination(
+              icon: Icon(Icons.chat_bubble_outline),
+              selectedIcon: Icon(Icons.chat_bubble),
+              label: 'Konsultasi'),
           NavigationDestination(
               icon: Icon(Icons.person_outline),
               selectedIcon: Icon(Icons.person),
@@ -141,31 +183,25 @@ class DoctorPatientListScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
                     Expanded(
-                      child: ListView(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        children: [
-                          _buildPatientItem(
-                              context,
-                              '09:00',
-                              'Milo',
-                              'Golden Retriever',
-                              'Konsultasi Online',
-                              Colors.green),
-                          _buildPatientItem(
-                              context,
-                              '10:00',
-                              'Luna',
-                              'Kucing Anggora',
-                              'Konsultasi Online',
-                              Colors.orange),
-                          _buildPatientItem(context, '11:00', 'Max',
-                              'Kucing Persia', 'Kontrol', Colors.blue),
-                          _buildPatientItem(context, '13:00', 'Bella', 'Poodle',
-                              'Konsultasi Online', Colors.green),
-                          _buildPatientItem(context, '14:00', 'Coco',
-                              'Maine Coon', 'Kontrol', Colors.blue),
-                        ],
-                      ),
+                      child: _isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : _patients.isEmpty
+                              ? const Center(
+                                  child: Text('Belum ada pasien', style: TextStyle(color: Color(0xFF7A93AA))),
+                                )
+                              : ListView.builder(
+                                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                                  itemCount: _patients.length,
+                                  itemBuilder: (context, index) {
+                                    final p = _patients[index];
+                                    final colors = [Colors.blue, Colors.green, Colors.orange];
+                                    return _buildPatientItem(
+                                      context,
+                                      p,
+                                      colors[index % colors.length],
+                                    );
+                                  },
+                                ),
                     ),
                   ],
                 ),
@@ -177,62 +213,74 @@ class DoctorPatientListScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPatientItem(BuildContext context, String time, String petName,
-      String breed, String type, MaterialColor color) {
-    return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, AppRoutes.doctorPatientDetail),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 24),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            CircleAvatar(
-              backgroundColor: const Color(0xFFF0F4F8),
-              radius: 24,
-              child: Icon(Icons.pets, color: color[300], size: 24),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildPatientItem(BuildContext context, Map<String, dynamic> patient, MaterialColor color) {
+    final ownerName = patient['owner_name'] as String? ?? 'Pemilik';
+    final petName = patient['pet_name'] as String? ?? 'Hewan';
+    final breed = patient['pet_breed'] as String? ?? 'Ras';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(context, AppRoutes.doctorPatientDetail, arguments: patient),
+        borderRadius: BorderRadius.circular(12),
+        hoverColor: Colors.blue.withOpacity(0.05),
+        splashColor: Colors.blue.withOpacity(0.1),
+        highlightColor: Colors.blue.withOpacity(0.05),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              CircleAvatar(
+                backgroundColor: const Color(0xFFF0F4F8),
+                radius: 24,
+                child: Icon(Icons.pets, color: color[300], size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(petName,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                            color: Color(0xFF0F2646))),
+                    Text(breed,
+                        style: const TextStyle(
+                            fontSize: 12, color: Color(0xFF7A93AA))),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.person_outline, size: 14, color: Color(0xFF7A93AA)),
+                        const SizedBox(width: 4),
+                        Text(ownerName,
+                            style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF7A93AA))),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Row(
                 children: [
-                  Text(petName,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                          color: Color(0xFF0F2646))),
-                  Text(breed,
-                      style: const TextStyle(
-                          fontSize: 12, color: Color(0xFF7A93AA))),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(time,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              color: Color(0xFF0F2646))),
-                      const Text(' WIB',
-                          style: TextStyle(
-                              fontSize: 12, color: Color(0xFF7A93AA))),
-                    ],
+                  IconButton(
+                    onPressed: () {},
+                    icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue, size: 22),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 16),
+                  IconButton(
+                    onPressed: () {},
+                    icon: const Icon(Icons.phone_outlined, color: Colors.green, size: 22),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
                 ],
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: color.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(type,
-                  style: TextStyle(
-                      color: color.shade700,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold)),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -240,8 +288,34 @@ class DoctorPatientListScreen extends StatelessWidget {
 }
 
 // ==== MOCKUP 13: DETAIL PASIEN ====
-class DoctorPatientDetailScreen extends StatelessWidget {
-  const DoctorPatientDetailScreen({super.key});
+class DoctorPatientDetailScreen extends StatefulWidget {
+  final Map<String, dynamic> patient;
+  const DoctorPatientDetailScreen({super.key, required this.patient});
+
+  @override
+  State<DoctorPatientDetailScreen> createState() => _DoctorPatientDetailScreenState();
+}
+
+class _DoctorPatientDetailScreenState extends State<DoctorPatientDetailScreen> {
+  List<Map<String, Object?>> history = [];
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    final petId = (widget.patient['id'] ?? widget.patient['pet_id']) as int;
+    final results = await DatabaseHelper.instance.getConsultationsByPetId(petId);
+    if (mounted) {
+      setState(() {
+        history = results;
+        loading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -279,16 +353,16 @@ class DoctorPatientDetailScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Milo',
-                            style: TextStyle(
+                        Text(widget.patient['name'] ?? 'Milo',
+                            style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w900,
                                 color: Color(0xFF0F2646))),
-                        const Text('Golden Retriever',
-                            style: TextStyle(
+                        Text(widget.patient['breed'] ?? 'Unknown',
+                            style: const TextStyle(
                                 color: Color(0xFF7A93AA), fontSize: 13)),
-                        const Text('2 Tahun',
-                            style: TextStyle(
+                        Text('${widget.patient['age_years'] ?? 0} Tahun',
+                            style: const TextStyle(
                                 color: Color(0xFF7A93AA), fontSize: 13)),
                       ],
                     ),
@@ -409,13 +483,121 @@ class DoctorPatientDetailScreen extends StatelessWidget {
     );
   }
 
-  // Placeholder for Riwayat, which can link to Mockup 14
   Widget _buildRiwayatTab(BuildContext context) {
-    return Center(
-      child: ElevatedButton(
-        onPressed: () =>
-            Navigator.pushNamed(context, AppRoutes.doctorMedicalHistory),
-        child: const Text('Buka Halaman Riwayat (Mockup 14)'),
+    if (loading) return const Center(child: CircularProgressIndicator());
+    if (history.isEmpty) {
+      return const Center(child: Text('Belum ada riwayat medis.', style: TextStyle(color: Color(0xFF7A93AA))));
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(24),
+      itemCount: history.length,
+      itemBuilder: (context, index) {
+        final item = history[index];
+        final date = item['schedule_date'] != null ? "${_formatDate(item['schedule_date'] as String?)} • ${item['schedule_time'] ?? ''}" : _formatDate(item['created_at']?.toString());
+        final isControl = item['is_control'] == 1;
+        final type = isControl ? 'Kontrol' : (item['method'] == 'Chat' ? 'Konsultasi Chat' : 'Konsultasi ${item['method']}');
+        
+        return _buildTimelineItem(
+          context,
+          id: item['id'] as int? ?? 0,
+          date: date,
+          type: type,
+          keluhan: item['main_complaints']?.toString() ?? item['complaint']?.toString(),
+          diagnosis: item['diagnosis']?.toString(),
+          terapi: item['prescription']?.toString(),
+          saran: item['advice']?.toString(),
+          isLast: index == history.length - 1,
+        );
+      },
+    );
+  }
+
+  Widget _buildTimelineItem(BuildContext context, {
+    required int id,
+    required String date,
+    required String type,
+    String? keluhan,
+    String? diagnosis,
+    String? terapi,
+    String? saran,
+    String? vaksin,
+    String? dokter,
+    required bool isLast,
+  }) {
+    return InkWell(
+      onTap: () {
+        Navigator.pushNamed(context, AppRoutes.consultationResult, arguments: {
+          'id': id,
+          'doctor_name': dokter ?? 'Dokter Anda',
+          'doctor_specialist': 'Klinik Hewan',
+        });
+      },
+      child: IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            children: [
+              Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFF2196F3), width: 4),
+                  color: Colors.white,
+                ),
+              ),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    color: const Color(0xFFE0E5EC),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(date, style: const TextStyle(color: Color(0xFF7A93AA), fontSize: 12)),
+                  const SizedBox(height: 4),
+                  Text(type, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F2646), fontSize: 14)),
+                  const SizedBox(height: 8),
+                  if (keluhan != null) _buildDetailRow('Keluhan', keluhan),
+                  if (diagnosis != null) _buildDetailRow('Diagnosis', diagnosis),
+                  if (terapi != null) _buildDetailRow('Terapi', terapi),
+                  if (saran != null) _buildDetailRow('Saran', saran),
+                  if (vaksin != null) _buildDetailRow('Vaksin', vaksin),
+                  if (dokter != null) _buildDetailRow('Dokter', dokter),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 70,
+            child: Text(label, style: const TextStyle(color: Color(0xFF7A93AA), fontSize: 12)),
+          ),
+          const Text(': ', style: TextStyle(color: Color(0xFF7A93AA), fontSize: 12)),
+          Expanded(
+            child: Text(value, style: const TextStyle(color: Color(0xFF0F2646), fontSize: 12)),
+          ),
+        ],
       ),
     );
   }
@@ -456,7 +638,7 @@ class DoctorMedicalHistoryScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          _buildTimelineItem(
+          _buildTimelineItem(context,
             date: '20 Mei 2025 • 09:00 WIB',
             type: 'Konsultasi Online',
             keluhan: 'Garuk-garuk, bulu rontok',
@@ -464,14 +646,14 @@ class DoctorMedicalHistoryScreen extends StatelessWidget {
             terapi: 'Cetirizine, Salep Chlorhexidine',
             isLast: false,
           ),
-          _buildTimelineItem(
+          _buildTimelineItem(context,
             date: '5 Mei 2025 • 10:00 WIB',
             type: 'Kontrol',
             keluhan: 'Membaik',
             saran: 'Lanjutkan pengobatan',
             isLast: false,
           ),
-          _buildTimelineItem(
+          _buildTimelineItem(context,
             date: '28 Apr 2025 • 09:30 WIB',
             type: 'Konsultasi Online',
             keluhan: 'Diare',
@@ -479,7 +661,7 @@ class DoctorMedicalHistoryScreen extends StatelessWidget {
             terapi: 'Oralit, Metronidazole',
             isLast: false,
           ),
-          _buildTimelineItem(
+          _buildTimelineItem(context,
             date: '10 Apr 2025 • 11:00 WIB',
             type: 'Vaksinasi',
             vaksin: 'Rabies',
@@ -491,7 +673,8 @@ class DoctorMedicalHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTimelineItem({
+  Widget _buildTimelineItem(BuildContext context, {
+    int id = 0,
     required String date,
     required String type,
     String? keluhan,
@@ -502,7 +685,15 @@ class DoctorMedicalHistoryScreen extends StatelessWidget {
     String? dokter,
     required bool isLast,
   }) {
-    return IntrinsicHeight(
+    return InkWell(
+      onTap: () {
+        Navigator.pushNamed(context, AppRoutes.consultationResult, arguments: {
+          'id': id,
+          'doctor_name': dokter ?? 'Dokter Anda',
+          'doctor_specialist': 'Klinik Hewan',
+        });
+      },
+      child: IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -576,6 +767,7 @@ class DoctorMedicalHistoryScreen extends StatelessWidget {
           const Icon(Icons.chevron_right, color: Color(0xFFE0E5EC)),
         ],
       ),
+    ),
     );
   }
 }
@@ -850,4 +1042,17 @@ class DoctorAddNoteScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatDate(String? raw) {
+  if (raw == null || raw.isEmpty) return '-';
+  try {
+    final parts = raw.split(' ')[0].split('-');
+    if (parts.length == 3) {
+      if (parts[0].length == 4) {
+        return '${parts[2]}-${parts[1]}-${parts[0]}';
+      }
+    }
+  } catch (_) {}
+  return raw;
 }
