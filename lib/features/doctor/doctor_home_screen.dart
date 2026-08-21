@@ -123,6 +123,34 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                                 color: Color(0xFF0F2646)),
                           ),
                           const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: doctor!['verified'] == 1 ? Colors.green.shade50 : Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: doctor!['verified'] == 1 ? Colors.green.shade200 : Colors.red.shade200)
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  doctor!['verified'] == 1 ? Icons.check_circle : Icons.error,
+                                  size: 14,
+                                  color: doctor!['verified'] == 1 ? Colors.green : Colors.red,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  doctor!['verified'] == 1 ? 'Akun Aktif' : 'Menunggu Verifikasi (Nonaktif)',
+                                  style: TextStyle(
+                                    color: doctor!['verified'] == 1 ? Colors.green : Colors.red,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
                           const Text(
                             'Semangat membantu hari ini!',
                             style: TextStyle(

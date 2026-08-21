@@ -238,13 +238,15 @@ class AdminReportScreen extends StatelessWidget {
                     'transaksi': 0,
                   };
                   
-                  return GridView.count(
+                  return GridView(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    childAspectRatio: 1.5,
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      mainAxisExtent: 110, // Fixed height for cards
+                    ),
                     children: [
                       _buildStatCard(
                           'Total Konsultasi', '${stats['total_konsultasi']}', '+0%', Colors.green),

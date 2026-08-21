@@ -29,6 +29,29 @@ class _OwnerConsultationsScreenState extends State<OwnerConsultationsScreen> {
         .loadOwner(context.read<AuthProvider>().user!.id));
   }
 
+  bool _canEnterConsultation(Map<String, dynamic> c) {
+    final status = c['status']?.toString().toUpperCase() ?? '';
+    if (status != 'IN_PROGRESS' && status != 'ACCEPTED') return false;
+    
+    final dateStr = c['schedule_date']?.toString() ?? '';
+    final timeStr = c['schedule_time']?.toString() ?? '';
+    if (dateStr.isEmpty || timeStr.isEmpty || timeStr == '-') return true;
+    
+    try {
+      String formattedDate = dateStr;
+      if (dateStr.contains('-')) {
+        final parts = dateStr.split('-');
+        if (parts.length == 3 && parts[0].length <= 2) {
+           formattedDate = '${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}';
+        }
+      }
+      final scheduleDateTime = DateTime.parse('$formattedDate $timeStr:00');
+      return DateTime.now().isAfter(scheduleDateTime.subtract(const Duration(minutes: 5)));
+    } catch(e) {
+      return true;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = context.watch<ConsultationProvider>();
@@ -106,19 +129,23 @@ class _OwnerConsultationsScreenState extends State<OwnerConsultationsScreen> {
                             ] else if (c['status'] == 'in_progress' ||
                                 c['status'] == 'accepted') ...[
                               const SizedBox(height: 12),
-                              ElevatedButton(
-                                onPressed: () {
-                                  Navigator.pushNamed(
-                                      context, AppRoutes.consultationRoom,
-                                      arguments: c);
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF2196F3),
-                                  minimumSize: const Size(double.infinity, 36),
-                                ),
-                                child: const Text('Masuk Ruang Konsultasi',
-                                    style: TextStyle(color: Colors.white)),
-                              )
+                              Builder(builder: (context) {
+                                final canEnter = _canEnterConsultation(c);
+                                return ElevatedButton(
+                                  onPressed: canEnter ? () {
+                                    Navigator.pushNamed(
+                                        context, AppRoutes.consultationRoom,
+                                        arguments: c);
+                                  } : null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: canEnter ? const Color(0xFF2196F3) : Colors.grey,
+                                    disabledBackgroundColor: Colors.grey.shade300,
+                                    minimumSize: const Size(double.infinity, 36),
+                                  ),
+                                  child: Text(canEnter ? 'Masuk Ruang Konsultasi' : 'Belum Waktunya',
+                                      style: TextStyle(color: canEnter ? Colors.white : Colors.grey.shade600)),
+                                );
+                              })
                             ] else if (c['status'] == 'finished') ...[
                               const SizedBox(height: 12),
                               const SizedBox(height: 12),

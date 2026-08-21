@@ -230,42 +230,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ),
-            if (!hasError) ...[
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  const Expanded(child: Divider(color: Color(0xFFE0E5EC))),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('atau',
-                        style: TextStyle(color: Color(0xFF7A93AA))),
-                  ),
-                  const Expanded(child: Divider(color: Color(0xFFE0E5EC))),
-                ],
-              ),
-              const SizedBox(height: 24),
-              OutlinedButton(
-                onPressed: () {},
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                  side: const BorderSide(color: Color(0xFFE0E5EC)),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.g_mobiledata, color: Colors.blue, size: 32),
-                    SizedBox(width: 8),
-                    Text('Masuk dengan Google',
-                        style: TextStyle(
-                            color: Color(0xFF0F2646),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16)),
-                  ],
-                ),
-              ),
-            ],
             const SizedBox(height: 48),
             Center(
               child: Column(

@@ -199,6 +199,28 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     );
   }
 
+  bool _canEnterConsultation(Map<String, dynamic> c) {
+    final dateStr = c['schedule_date']?.toString() ?? '';
+    final timeStr = c['schedule_time']?.toString() ?? '';
+    if (dateStr.isEmpty || timeStr.isEmpty || timeStr == '-') return true;
+
+    try {
+      String formattedDate = dateStr;
+      if (dateStr.contains('-')) {
+        final parts = dateStr.split('-');
+        if (parts.length == 3 && parts[0].length <= 2) {
+           // DD-MM-YYYY -> YYYY-MM-DD
+           formattedDate = '${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}';
+        }
+      }
+      final scheduleDateTime = DateTime.parse('$formattedDate $timeStr:00');
+      // Allow entry 5 mins early
+      return DateTime.now().isAfter(scheduleDateTime.subtract(const Duration(minutes: 5)));
+    } catch (e) {
+      return true;
+    }
+  }
+
   Widget _buildPetCard(Map<String, dynamic> pet) {
     IconData icon = Icons.pets;
     if (pet['species'].toString().toLowerCase().contains('kucing'))
@@ -352,6 +374,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
     }
 
     final consult = consults.first;
+    final canEnter = _canEnterConsultation(consult);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -419,19 +442,19 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                             color: Color(0xFF0F2646))),
                     const Spacer(),
                     OutlinedButton(
-                      onPressed: () => Navigator.pushNamed(
+                      onPressed: canEnter ? () => Navigator.pushNamed(
                           context, AppRoutes.chat,
-                          arguments: consult),
+                          arguments: consult) : null,
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         minimumSize: const Size(0, 32),
-                        side: const BorderSide(color: Color(0xFF45A5C7)),
+                        side: BorderSide(color: canEnter ? const Color(0xFF45A5C7) : Colors.grey),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: const Text('Chat',
+                      child: Text(canEnter ? 'Chat' : 'Belum Waktunya',
                           style: TextStyle(
-                              color: Color(0xFF45A5C7),
+                              color: canEnter ? const Color(0xFF45A5C7) : Colors.grey,
                               fontSize: 12,
                               fontWeight: FontWeight.bold)),
                     ),

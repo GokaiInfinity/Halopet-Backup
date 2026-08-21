@@ -26,13 +26,38 @@ class _ChatScreenState extends State<ChatScreen> {
   List<Map<String, Object?>> messages = [];
   final text = TextEditingController();
   Timer? _timer;
+  int _tick = 0;
+
+  bool get _isExpired {
+    final status = widget.consultation['status']?.toString().toLowerCase();
+    if (status == 'finished' || status == 'selesai') return true;
+    if (messages.isEmpty) return false;
+    final start = DateTime.tryParse(messages.first['created_at']?.toString() ?? '') ?? DateTime.now();
+    final expiry = start.add(const Duration(minutes: 10));
+    return DateTime.now().isAfter(expiry);
+  }
+
+  String get _remainingTime {
+    if (messages.isEmpty) return '10:00';
+    final start = DateTime.tryParse(messages.first['created_at']?.toString() ?? '') ?? DateTime.now();
+    final expiry = start.add(const Duration(minutes: 10));
+    final diff = expiry.difference(DateTime.now());
+    if (diff.isNegative) return '00:00';
+    final m = diff.inMinutes.toString().padLeft(2, '0');
+    final s = (diff.inSeconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
 
   @override
   void initState() {
     super.initState();
     load();
-    _timer = Timer.periodic(const Duration(seconds: 2), (_) {
-      load();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _tick++;
+      if (_tick % 2 == 0) {
+        load();
+      }
+      if (mounted) setState(() {});
     });
   }
 
@@ -90,7 +115,29 @@ class _ChatScreenState extends State<ChatScreen> {
                   const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
           Text('${widget.consultation['pet_name'] ?? ''}',
               style: const TextStyle(fontSize: 12, color: AppColors.muted))
-        ])),
+        ]),
+          actions: [
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(right: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _isExpired ? Colors.red.shade50 : Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: _isExpired ? Colors.red.shade200 : Colors.blue.shade200)
+                ),
+                child: Text(
+                  _isExpired ? 'Waktu Habis' : _remainingTime,
+                  style: TextStyle(
+                    color: _isExpired ? Colors.red : Colors.blue,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12
+                  )
+                )
+              )
+            )
+          ]
+        ),
         body: Column(children: [
           Expanded(
               child: messages.isEmpty
@@ -166,7 +213,15 @@ class _ChatScreenState extends State<ChatScreen> {
                       })),
           SafeArea(
               top: false,
-              child: Padding(
+              child: _isExpired 
+                ? Container(
+                    padding: const EdgeInsets.all(16),
+                    width: double.infinity,
+                    color: Colors.grey.shade100,
+                    alignment: Alignment.center,
+                    child: const Text('Sesi konsultasi telah berakhir.', style: TextStyle(color: AppColors.muted, fontWeight: FontWeight.bold))
+                  )
+                : Padding(
                   padding: const EdgeInsets.all(12),
                   child: Row(children: [
                     IconButton(

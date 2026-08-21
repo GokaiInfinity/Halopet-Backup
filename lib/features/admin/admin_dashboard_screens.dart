@@ -246,21 +246,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       fontSize: 16,
                       color: Color(0xFF0F2646))),
               const SizedBox(height: 16),
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 4,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
+              Wrap(
+                spacing: 24,
+                runSpacing: 24,
+                alignment: WrapAlignment.center,
                 children: [
-                  _buildQuickMenu(Icons.chat_bubble_outline, 'Konsultasi', () {
-                    Navigator.pushNamed(context, AppRoutes.adminConsultations);
-                  }),
-                  _buildQuickMenu(
-                      Icons.pets,
-                      'Pasien',
-                      () => Navigator.pushNamed(
-                          context, AppRoutes.adminPatients)),
                   _buildQuickMenu(
                       Icons.medical_services_outlined,
                       'Dokter',
@@ -271,11 +261,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       'Pembayaran',
                       () => Navigator.pushNamed(
                           context, AppRoutes.adminTransactions)),
-                  _buildQuickMenu(
-                      Icons.insert_chart_outlined,
-                      'Laporan',
-                      () =>
-                          Navigator.pushNamed(context, AppRoutes.adminReports)),
                   _buildQuickMenu(
                       Icons.article_outlined,
                       'Layanan',
@@ -304,7 +289,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           fontSize: 16,
                           color: Color(0xFF0F2646))),
                   TextButton(
-                      onPressed: () {},
+                      onPressed: () => Navigator.pushNamed(context, AppRoutes.adminNotifications),
                       child: const Text('Lihat semua >',
                           style: TextStyle(
                               color: Color(0xFF2196F3),
@@ -432,8 +417,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildQuickMenu(IconData icon, String label, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: SizedBox(
+        width: 80,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
             padding: const EdgeInsets.all(12),
@@ -449,6 +436,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   color: Color(0xFF7A93AA),
                   fontWeight: FontWeight.w600)),
         ],
+      ),
       ),
     );
   }

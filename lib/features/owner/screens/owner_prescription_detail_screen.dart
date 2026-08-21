@@ -2,11 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:intl/intl.dart';
 
 class OwnerPrescriptionDetailScreen extends StatelessWidget {
   final Map<String, dynamic> prescription;
 
   const OwnerPrescriptionDetailScreen({Key? key, required this.prescription}) : super(key: key);
+
+  String _formatDate(String? rawDate) {
+    if (rawDate == null || rawDate.isEmpty) return '-';
+    try {
+      final dt = DateTime.parse(rawDate);
+      return DateFormat('dd-MM-yyyy HH:mm').format(dt);
+    } catch (e) {
+      return rawDate;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +77,7 @@ class OwnerPrescriptionDetailScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   _buildInfoRow('Dokter:', prescription['doctor_name'] ?? '-'),
                   const SizedBox(height: 8),
-                  _buildInfoRow('Tanggal:', prescription['prescription_date']?.toString().split(' ')[0] ?? '-'),
+                  _buildInfoRow('Tanggal:', _formatDate(prescription['prescription_date']?.toString())),
                 ],
               ),
             ),

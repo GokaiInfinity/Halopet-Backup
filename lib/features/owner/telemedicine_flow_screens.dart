@@ -290,13 +290,21 @@ class _ConsultationRoomScreenState extends State<ConsultationRoomScreen> {
           ],
         ),
         actions: [
-          if (context.read<AuthProvider>().user?.role == 'doctor')
+          if (context.read<AuthProvider>().user?.role == 'doctor') ...[
+            IconButton(
+              icon: const Icon(Icons.edit_note, color: Color(0xFF45A5C7)),
+              tooltip: 'Isi Hasil Konsultasi (Rekam Medis)',
+              onPressed: () => Navigator.pushNamed(context, AppRoutes.doctorConsultationResultForm, arguments: widget.args),
+            ),
             IconButton(
               icon: const Icon(Icons.history, color: Color(0xFF45A5C7)),
+              tooltip: 'Riwayat Medis',
               onPressed: () => Navigator.pushNamed(context, AppRoutes.doctorMedicalHistory, arguments: widget.args),
             ),
+          ],
           IconButton(
             icon: const Icon(Icons.assignment, color: Color(0xFF45A5C7)),
+            tooltip: 'Kuesioner Pemilik',
             onPressed: _showQuestionnaire,
           ),
           IconButton(

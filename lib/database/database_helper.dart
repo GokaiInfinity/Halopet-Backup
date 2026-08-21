@@ -947,6 +947,15 @@ class DatabaseHelper {
     );
   }
 
+  Future<void> updateDoctorVerification(int doctorId, int verified) async {
+    await (await database).update(
+      'doctors',
+      {'verified': verified},
+      where: 'id = ?',
+      whereArgs: [doctorId],
+    );
+  }
+
   Future<List<Map<String, Object?>>> getAdminTransactions() async {
     return (await database).rawQuery(
       '''SELECT c.*, p.name as pet_name, u.name as owner_name, docu.name as doctor_name

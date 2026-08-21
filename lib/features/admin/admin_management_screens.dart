@@ -576,14 +576,18 @@ class _AdminDoctorManagementScreenState extends State<AdminDoctorManagementScree
   }
 
   Widget _buildDoctorItem(Map<String, dynamic> doctor, bool isActive) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, AppRoutes.doctorDetail, arguments: doctor);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
       child: Row(
         children: [
           const CircleAvatar(
@@ -611,13 +615,25 @@ class _AdminDoctorManagementScreenState extends State<AdminDoctorManagementScree
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                isActive ? 'Aktif' : 'Nonaktif',
-                style: TextStyle(
-                  color: isActive ? Colors.green : Colors.red,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    isActive ? 'Aktif' : 'Nonaktif',
+                    style: TextStyle(
+                      color: isActive ? Colors.green : Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                  Switch(
+                    value: isActive,
+                    activeColor: Colors.green,
+                    onChanged: (bool value) {
+                      _toggleDoctorStatus(doctor, value);
+                    },
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               InkWell(
@@ -638,7 +654,23 @@ class _AdminDoctorManagementScreenState extends State<AdminDoctorManagementScree
           ),
         ],
       ),
+      ),
     );
+  }
+
+  void _toggleDoctorStatus(Map<String, dynamic> doctor, bool newValue) async {
+    final doctorId = doctor['id'];
+    if (doctorId != null) {
+      await DatabaseHelper.instance.updateDoctorVerification(doctorId, newValue ? 1 : 0);
+      if (mounted) {
+        setState(() {
+          _refreshKey = UniqueKey();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Status dokter berhasil diperbarui!')),
+        );
+      }
+    }
   }
 
   void _showEditFeeDialog(Map<String, dynamic> doctor) {

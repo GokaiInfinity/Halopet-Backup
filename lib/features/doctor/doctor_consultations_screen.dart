@@ -32,6 +32,31 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
     }
   }
 
+  bool _canEnterConsultation(Map<String, dynamic> c) {
+    final status = c['status']?.toString().toUpperCase() ?? '';
+    if (status != 'IN_PROGRESS' && status != 'ACCEPTED') return false;
+    
+    final dateStr = c['schedule_date']?.toString() ?? '';
+    final timeStr = c['schedule_time']?.toString() ?? '';
+    if (dateStr.isEmpty || timeStr.isEmpty || timeStr == '-') return true; // fallback
+    
+    try {
+      String formattedDate = dateStr;
+      if (dateStr.contains('-')) {
+        final parts = dateStr.split('-');
+        if (parts.length == 3 && parts[0].length <= 2) {
+           // DD-MM-YYYY -> YYYY-MM-DD
+           formattedDate = '${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}';
+        }
+      }
+      final scheduleDateTime = DateTime.parse('$formattedDate $timeStr:00');
+      // allow entry 5 mins early
+      return DateTime.now().isAfter(scheduleDateTime.subtract(const Duration(minutes: 5)));
+    } catch(e) {
+      return true;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = context.watch<ConsultationProvider>();
@@ -112,19 +137,28 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
                             const SizedBox(height: 16),
                             SizedBox(
                               width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: status.toUpperCase() == 'IN_PROGRESS' || status.toUpperCase() == 'ACCEPTED'
-                                    ? () {
-                                        Navigator.pushNamed(
-                                            context, AppRoutes.consultationRoom,
-                                            arguments: {
-                                              'consultation_id': c['id'],
-                                              'chat_title': c['pet_name']?.toString() ?? 'Hewan',
-                                              'chat_subtitle': c['owner_name']?.toString() ?? 'Pemilik',
-                                            });
-                                      }
-                                    : null,
-                                child: Text(status.toUpperCase() == 'IN_PROGRESS' || status.toUpperCase() == 'ACCEPTED' ? 'Masuk Ruang Konsultasi' : 'Selesai'),
+                              child: Builder(
+                                builder: (context) {
+                                  final canEnter = _canEnterConsultation(c);
+                                  return ElevatedButton(
+                                    onPressed: canEnter
+                                        ? () {
+                                            Navigator.pushNamed(
+                                                context, AppRoutes.consultationRoom,
+                                                arguments: {
+                                                  'consultation_id': c['id'],
+                                                  'chat_title': c['pet_name']?.toString() ?? 'Hewan',
+                                                  'chat_subtitle': c['owner_name']?.toString() ?? 'Pemilik',
+                                                });
+                                          }
+                                        : null,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: canEnter ? null : Colors.grey,
+                                      disabledBackgroundColor: Colors.grey.shade300,
+                                    ),
+                                    child: Text(canEnter ? 'Masuk Ruang Konsultasi' : 'Belum Waktunya'),
+                                  );
+                                }
                               ),
                             )
                           ],
