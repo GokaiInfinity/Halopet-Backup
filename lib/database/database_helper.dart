@@ -1,73 +1,120 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
-import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:postgres/postgres.dart';
+import 'pg_wrapper.dart';
 
 class DatabaseHelper {
   DatabaseHelper._();
   static final instance = DatabaseHelper._();
-  Database? _database;
+  PgDatabase? _database;
 
-  Future<Database> get database async => _database ??= await _init();
+  Future<PgDatabase> get database async => _database ??= await _init();
 
-  Future<Database> _init() async {
-    final path = join(await getDatabasesPath(), 'halopet.db');
-    return openDatabase(path,
-        version: 13,
-        onCreate: _onCreate,
-        onUpgrade: _onUpgrade,
-        onOpen: (db) async => _seed(db));
+  int? _firstIntValue(List<Map<String, dynamic>> list) {
+    if (list.isNotEmpty && list.first.isNotEmpty) {
+      final value = list.first.values.first;
+      if (value is int) return value;
+      if (value != null) return int.tryParse(value.toString());
+    }
+    return null;
   }
 
-  Future<void> _onCreate(Database db, int version) async {
+    Future<PgDatabase> _init() async {
+      final conn = await Connection.open(
+      Endpoint(
+        host: dotenv.env['DB_HOST'] ?? 'localhost',
+        port: int.parse(dotenv.env['DB_PORT'] ?? '5432'),
+        database: dotenv.env['DB_NAME'] ?? 'postgres',
+        username: dotenv.env['DB_USER'] ?? 'postgres',
+        password: dotenv.env['DB_PASSWORD'],
+      ),
+      settings: ConnectionSettings(sslMode: SslMode.require),
+    );
+
+    final pgDb = PgDatabase(conn);
+    
+      // Check if DB is in a broken state (users exists but doctors doesn't)
+      bool brokenState = false;
+      try {
+        final u = await pgDb.rawQuery("SELECT 1 FROM information_schema.tables WHERE table_name = 'users'");
+        final d = await pgDb.rawQuery("SELECT 1 FROM information_schema.tables WHERE table_name = 'doctors'");
+        if (u.isNotEmpty && d.isEmpty) brokenState = true;
+      } catch(_) {}
+
+      if (brokenState) {
+        // WIPE DB ONCE to fix broken state
+        final tables = [
+          'reviews', 'monitoring_logs', 'medicine_orders', 'prescription_items',
+          'prescriptions', 'consultation_results', 'notifications', 'medical_records',
+          'messages', 'screenings', 'complaints', 'consultations', 'schedules',
+          'diseases', 'vaccinations', 'pets', 'doctors', 'help_tickets', 'users',
+          'services', 'medicines'
+        ];
+        for (var t in tables) {
+          try { await pgDb.execute('DROP TABLE IF EXISTS \$t CASCADE'); } catch(_) {}
+        }
+      }
+
+      await _onCreate(pgDb, 1);
+      // Wait for table creation then try seeding
+      await _seed(pgDb);
+    } catch (e) {
+      print('Database init error: \$e');
+    }
+    
+    return pgDb;
+  }
+
+  Future<void> _onCreate(PgDatabase db, int version) async {
     await db.execute(
-        '''CREATE TABLE users(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, phone TEXT DEFAULT '', photo TEXT DEFAULT '', role TEXT NOT NULL, created_at TEXT NOT NULL)''');
+        '''CREATE TABLE IF NOT EXISTS users(id SERIAL PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, phone TEXT DEFAULT '', photo TEXT DEFAULT '', role TEXT NOT NULL, created_at TEXT NOT NULL)''');
     await db.execute(
-        '''CREATE TABLE doctors(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL UNIQUE, specialist TEXT NOT NULL, license TEXT NOT NULL, rating REAL DEFAULT 0, experience INTEGER DEFAULT 0, bio TEXT DEFAULT '', consultation_fee REAL DEFAULT 50000, verified INTEGER DEFAULT 1, FOREIGN KEY(user_id) REFERENCES users(id))''');
+        '''CREATE TABLE IF NOT EXISTS doctors(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL UNIQUE, specialist TEXT NOT NULL, license TEXT NOT NULL, rating REAL DEFAULT 0, experience INTEGER DEFAULT 0, bio TEXT DEFAULT '', consultation_fee REAL DEFAULT 50000, verified INTEGER DEFAULT 1, FOREIGN KEY(user_id) REFERENCES users(id))''');
     await db.execute(
-        '''CREATE TABLE pets(id INTEGER PRIMARY KEY AUTOINCREMENT, owner_id INTEGER NOT NULL, name TEXT NOT NULL, species TEXT NOT NULL, breed TEXT DEFAULT '', gender TEXT DEFAULT '', age INTEGER DEFAULT 0, weight REAL DEFAULT 0, photo TEXT DEFAULT '', tanggal_lahir TEXT DEFAULT '', warna_ciri TEXT DEFAULT '', status_steril TEXT DEFAULT 'Belum Steril', alergi TEXT DEFAULT '', additional_photos TEXT DEFAULT '[]', microchip_id TEXT DEFAULT '', blood_type TEXT DEFAULT '', FOREIGN KEY(owner_id) REFERENCES users(id))''');
+        '''CREATE TABLE IF NOT EXISTS pets(id INTEGER PRIMARY KEY AUTOINCREMENT, owner_id INTEGER NOT NULL, name TEXT NOT NULL, species TEXT NOT NULL, breed TEXT DEFAULT '', gender TEXT DEFAULT '', age INTEGER DEFAULT 0, weight REAL DEFAULT 0, photo TEXT DEFAULT '', tanggal_lahir TEXT DEFAULT '', warna_ciri TEXT DEFAULT '', status_steril TEXT DEFAULT 'Belum Steril', alergi TEXT DEFAULT '', additional_photos TEXT DEFAULT '[]', microchip_id TEXT DEFAULT '', blood_type TEXT DEFAULT '', FOREIGN KEY(owner_id) REFERENCES users(id))''');
     await db.execute(
-        '''CREATE TABLE vaccinations(id INTEGER PRIMARY KEY AUTOINCREMENT, pet_id INTEGER NOT NULL, name TEXT NOT NULL, date TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'Aktif', next_date TEXT DEFAULT '', brand TEXT DEFAULT '', batch_number TEXT DEFAULT '', FOREIGN KEY(pet_id) REFERENCES pets(id))''');
+        '''CREATE TABLE IF NOT EXISTS vaccinations(id INTEGER PRIMARY KEY AUTOINCREMENT, pet_id INTEGER NOT NULL, name TEXT NOT NULL, date TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'Aktif', next_date TEXT DEFAULT '', brand TEXT DEFAULT '', batch_number TEXT DEFAULT '', FOREIGN KEY(pet_id) REFERENCES pets(id))''');
     await db.execute(
-        '''CREATE TABLE diseases(id INTEGER PRIMARY KEY AUTOINCREMENT, pet_id INTEGER NOT NULL, name TEXT NOT NULL, date TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'Sembuh', FOREIGN KEY(pet_id) REFERENCES pets(id))''');
+        '''CREATE TABLE IF NOT EXISTS diseases(id INTEGER PRIMARY KEY AUTOINCREMENT, pet_id INTEGER NOT NULL, name TEXT NOT NULL, date TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'Sembuh', FOREIGN KEY(pet_id) REFERENCES pets(id))''');
     await db.execute(
-        '''CREATE TABLE schedules(id INTEGER PRIMARY KEY AUTOINCREMENT, doctor_id INTEGER NOT NULL, date TEXT NOT NULL, time TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'available', max_patients INTEGER NOT NULL DEFAULT 1, FOREIGN KEY(doctor_id) REFERENCES doctors(id))''');
+        '''CREATE TABLE IF NOT EXISTS schedules(id INTEGER PRIMARY KEY AUTOINCREMENT, doctor_id INTEGER NOT NULL, date TEXT NOT NULL, time TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'available', max_patients INTEGER NOT NULL DEFAULT 1, FOREIGN KEY(doctor_id) REFERENCES doctors(id))''');
     await db.execute(
-        '''CREATE TABLE consultations(id INTEGER PRIMARY KEY AUTOINCREMENT, pet_id INTEGER NOT NULL, doctor_id INTEGER NOT NULL, schedule_id INTEGER, complaint TEXT NOT NULL, method TEXT DEFAULT 'Chat', status TEXT NOT NULL DEFAULT 'waiting', is_control INTEGER DEFAULT 0, parent_consultation_id INTEGER, created_at TEXT NOT NULL, FOREIGN KEY(pet_id) REFERENCES pets(id), FOREIGN KEY(doctor_id) REFERENCES doctors(id))''');
+        '''CREATE TABLE IF NOT EXISTS consultations(id INTEGER PRIMARY KEY AUTOINCREMENT, pet_id INTEGER NOT NULL, doctor_id INTEGER NOT NULL, schedule_id INTEGER, complaint TEXT NOT NULL, method TEXT DEFAULT 'Chat', status TEXT NOT NULL DEFAULT 'waiting', is_control INTEGER DEFAULT 0, parent_consultation_id INTEGER, created_at TEXT NOT NULL, FOREIGN KEY(pet_id) REFERENCES pets(id), FOREIGN KEY(doctor_id) REFERENCES doctors(id))''');
     await db.execute(
-        '''CREATE TABLE complaints(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, service_type TEXT DEFAULT '', main_complaints TEXT DEFAULT '', duration TEXT DEFAULT '', appetite TEXT DEFAULT '', activity TEXT DEFAULT '', urine TEXT DEFAULT '', feces TEXT DEFAULT '', vomit INTEGER DEFAULT 0, respiratory TEXT DEFAULT '', skin_coat TEXT DEFAULT '', medication TEXT DEFAULT '', photos_videos TEXT DEFAULT '', water_intake TEXT DEFAULT '', FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
+        '''CREATE TABLE IF NOT EXISTS complaints(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, service_type TEXT DEFAULT '', main_complaints TEXT DEFAULT '', duration TEXT DEFAULT '', appetite TEXT DEFAULT '', activity TEXT DEFAULT '', urine TEXT DEFAULT '', feces TEXT DEFAULT '', vomit INTEGER DEFAULT 0, respiratory TEXT DEFAULT '', skin_coat TEXT DEFAULT '', medication TEXT DEFAULT '', photos_videos TEXT DEFAULT '', water_intake TEXT DEFAULT '', FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
     await db.execute(
-        '''CREATE TABLE screenings(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, difficulty_breathing INTEGER DEFAULT 0, seizures INTEGER DEFAULT 0, unconscious INTEGER DEFAULT 0, heavy_bleeding INTEGER DEFAULT 0, severe_trauma INTEGER DEFAULT 0, cannot_stand INTEGER DEFAULT 0, poisoning INTEGER DEFAULT 0, cannot_urinate INTEGER DEFAULT 0, continuous_vomiting INTEGER DEFAULT 0, result_category TEXT DEFAULT 'Ringan', mucous_membrane TEXT DEFAULT '', crt TEXT DEFAULT '', FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
+        '''CREATE TABLE IF NOT EXISTS screenings(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, difficulty_breathing INTEGER DEFAULT 0, seizures INTEGER DEFAULT 0, unconscious INTEGER DEFAULT 0, heavy_bleeding INTEGER DEFAULT 0, severe_trauma INTEGER DEFAULT 0, cannot_stand INTEGER DEFAULT 0, poisoning INTEGER DEFAULT 0, cannot_urinate INTEGER DEFAULT 0, continuous_vomiting INTEGER DEFAULT 0, result_category TEXT DEFAULT 'Ringan', mucous_membrane TEXT DEFAULT '', crt TEXT DEFAULT '', FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
     await db.execute(
-        '''CREATE TABLE messages(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, sender_id INTEGER NOT NULL, message TEXT NOT NULL, is_read INTEGER DEFAULT 0, created_at TEXT NOT NULL, FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
+        '''CREATE TABLE IF NOT EXISTS messages(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, sender_id INTEGER NOT NULL, message TEXT NOT NULL, is_read INTEGER DEFAULT 0, created_at TEXT NOT NULL, FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
     await db.execute(
-        '''CREATE TABLE medical_records(id INTEGER PRIMARY KEY AUTOINCREMENT, pet_id INTEGER NOT NULL, doctor_id INTEGER NOT NULL, consultation_id INTEGER, diagnosis TEXT NOT NULL, treatment TEXT DEFAULT '', medicine TEXT DEFAULT '', notes TEXT DEFAULT '', date TEXT NOT NULL, temperature REAL DEFAULT 0, heart_rate INTEGER DEFAULT 0, respiratory_rate INTEGER DEFAULT 0, weight_at_visit REAL DEFAULT 0, FOREIGN KEY(pet_id) REFERENCES pets(id), FOREIGN KEY(doctor_id) REFERENCES doctors(id))''');
+        '''CREATE TABLE IF NOT EXISTS medical_records(id INTEGER PRIMARY KEY AUTOINCREMENT, pet_id INTEGER NOT NULL, doctor_id INTEGER NOT NULL, consultation_id INTEGER, diagnosis TEXT NOT NULL, treatment TEXT DEFAULT '', medicine TEXT DEFAULT '', notes TEXT DEFAULT '', date TEXT NOT NULL, temperature REAL DEFAULT 0, heart_rate INTEGER DEFAULT 0, respiratory_rate INTEGER DEFAULT 0, weight_at_visit REAL DEFAULT 0, FOREIGN KEY(pet_id) REFERENCES pets(id), FOREIGN KEY(doctor_id) REFERENCES doctors(id))''');
     await db.execute(
-        '''CREATE TABLE notifications(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, message TEXT NOT NULL, is_read INTEGER DEFAULT 0, created_at TEXT NOT NULL)''');
+        '''CREATE TABLE IF NOT EXISTS notifications(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, title TEXT NOT NULL, message TEXT NOT NULL, is_read INTEGER DEFAULT 0, created_at TEXT NOT NULL)''');
     await db.execute(
-        '''CREATE TABLE consultation_results(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, observation TEXT DEFAULT '', diagnosis TEXT DEFAULT '', advice TEXT DEFAULT '', forbidden TEXT DEFAULT '', warning_signs TEXT DEFAULT '', follow_up TEXT DEFAULT '', control_decision TEXT DEFAULT '', FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
+        '''CREATE TABLE IF NOT EXISTS consultation_results(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, observation TEXT DEFAULT '', diagnosis TEXT DEFAULT '', advice TEXT DEFAULT '', forbidden TEXT DEFAULT '', warning_signs TEXT DEFAULT '', follow_up TEXT DEFAULT '', control_decision TEXT DEFAULT '', FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
     await db.execute(
-        '''CREATE TABLE prescriptions(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, notes TEXT DEFAULT '', created_at TEXT NOT NULL, FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
+        '''CREATE TABLE IF NOT EXISTS prescriptions(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, notes TEXT DEFAULT '', created_at TEXT NOT NULL, FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
     await db.execute(
-        '''CREATE TABLE prescription_items(id INTEGER PRIMARY KEY AUTOINCREMENT, prescription_id INTEGER NOT NULL, medicine_name TEXT NOT NULL, form TEXT DEFAULT '', dose TEXT DEFAULT '', frequency TEXT DEFAULT '', duration TEXT DEFAULT '', method TEXT DEFAULT '', qty TEXT DEFAULT '', FOREIGN KEY(prescription_id) REFERENCES prescriptions(id))''');
+        '''CREATE TABLE IF NOT EXISTS prescription_items(id INTEGER PRIMARY KEY AUTOINCREMENT, prescription_id INTEGER NOT NULL, medicine_name TEXT NOT NULL, form TEXT DEFAULT '', dose TEXT DEFAULT '', frequency TEXT DEFAULT '', duration TEXT DEFAULT '', method TEXT DEFAULT '', qty TEXT DEFAULT '', FOREIGN KEY(prescription_id) REFERENCES prescriptions(id))''');
     await db.execute(
-        '''CREATE TABLE medicine_orders(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, delivery_address TEXT NOT NULL, medicine_price REAL DEFAULT 0, delivery_fee REAL DEFAULT 0, total_price REAL DEFAULT 0, status TEXT NOT NULL DEFAULT 'waiting_payment', created_at TEXT NOT NULL, FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
+        '''CREATE TABLE IF NOT EXISTS medicine_orders(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, delivery_address TEXT NOT NULL, medicine_price REAL DEFAULT 0, delivery_fee REAL DEFAULT 0, total_price REAL DEFAULT 0, status TEXT NOT NULL DEFAULT 'waiting_payment', created_at TEXT NOT NULL, FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
     await db.execute(
-        '''CREATE TABLE monitoring_logs(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, date TEXT NOT NULL, appetite TEXT DEFAULT '', activity TEXT DEFAULT '', condition TEXT DEFAULT '', symptoms TEXT DEFAULT '', medicine_effects TEXT DEFAULT '', photo TEXT DEFAULT '', FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
+        '''CREATE TABLE IF NOT EXISTS monitoring_logs(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL, date TEXT NOT NULL, appetite TEXT DEFAULT '', activity TEXT DEFAULT '', condition TEXT DEFAULT '', symptoms TEXT DEFAULT '', medicine_effects TEXT DEFAULT '', photo TEXT DEFAULT '', FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
     await db.execute(
-        '''CREATE TABLE reviews(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL UNIQUE, rating_doctor REAL DEFAULT 0, rating_info REAL DEFAULT 0, rating_app REAL DEFAULT 0, rating_quality REAL DEFAULT 0, review_text TEXT DEFAULT '', created_at TEXT NOT NULL, FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
+        '''CREATE TABLE IF NOT EXISTS reviews(id INTEGER PRIMARY KEY AUTOINCREMENT, consultation_id INTEGER NOT NULL UNIQUE, rating_doctor REAL DEFAULT 0, rating_info REAL DEFAULT 0, rating_app REAL DEFAULT 0, rating_quality REAL DEFAULT 0, review_text TEXT DEFAULT '', created_at TEXT NOT NULL, FOREIGN KEY(consultation_id) REFERENCES consultations(id))''');
     await db.execute(
-        '''CREATE TABLE help_tickets(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'open', admin_reply TEXT DEFAULT '', created_at TEXT NOT NULL, FOREIGN KEY(user_id) REFERENCES users(id))''');
+        '''CREATE TABLE IF NOT EXISTS help_tickets(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'open', admin_reply TEXT DEFAULT '', created_at TEXT NOT NULL, FOREIGN KEY(user_id) REFERENCES users(id))''');
     await db.execute(
-        '''CREATE TABLE services(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, category TEXT NOT NULL, price REAL NOT NULL, status TEXT DEFAULT 'Aktif')''');
+        '''CREATE TABLE IF NOT EXISTS services(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, category TEXT NOT NULL, price REAL NOT NULL, status TEXT DEFAULT 'Aktif')''');
     await db.execute(
-        '''CREATE TABLE medicines(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, category TEXT NOT NULL, stock INTEGER NOT NULL, price REAL NOT NULL, status TEXT DEFAULT 'Tersedia')''');
+        '''CREATE TABLE IF NOT EXISTS medicines(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, category TEXT NOT NULL, stock INTEGER NOT NULL, price REAL NOT NULL, status TEXT DEFAULT 'Tersedia')''');
 
     await _seed(db);
   }
 
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+  Future<void> _onUpgrade(PgDatabase db, int oldVersion, int newVersion) async {
     if (oldVersion < 11) {
       try {
         await db.execute('ALTER TABLE schedules ADD COLUMN max_patients INTEGER NOT NULL DEFAULT 1');
@@ -263,20 +310,24 @@ class DatabaseHelper {
   String hashPassword(String password) =>
       sha256.convert(utf8.encode(password)).toString();
 
-  Future<void> _seed(Database db) async {
-    final count = Sqflite.firstIntValue(
-            await db.rawQuery('SELECT COUNT(*) FROM users')) ??
+  Future<void> _seed(PgDatabase db) async {
+    final count = _firstIntValue(
+            await db.rawQuery("SELECT COUNT(*) FROM users WHERE email = 'owner@halopet.com'")) ??
         0;
-    if (count > 0) return;
+    if (count > 0) return; // Only return if owner is already seeded
+
     final now = DateTime.now().toIso8601String();
-    final ownerId = await db.insert('users', {
-      'name': 'Adel Pemilik',
-      'email': 'owner@halopet.com',
-      'password_hash': hashPassword('123456'),
-      'phone': '081234567890',
-      'role': 'owner',
-      'created_at': now
-    });
+    
+    // Use raw queries with ON CONFLICT DO NOTHING to avoid crashing if partially seeded
+    await db.execute('''
+      INSERT INTO users (name, email, password_hash, phone, role, created_at) 
+      VALUES ('Adel Pemilik', 'owner@halopet.com', '\${hashPassword('123456')}', '081234567890', 'owner', '\$now')
+      ON CONFLICT (email) DO NOTHING
+    ''');
+    
+    final ownerRows = await db.rawQuery("SELECT id FROM users WHERE email = 'owner@halopet.com'");
+    if (ownerRows.isEmpty) return;
+    final ownerId = ownerRows.first['id'] as int;
     final doctorUserId = await db.insert('users', {
       'name': 'drh. Andi Pratama',
       'email': 'doctor@halopet.com',
@@ -696,7 +747,7 @@ class DatabaseHelper {
   Future<Map<String, int>> getAdminStats() async {
     final db = await database;
     Future<int> count(String table) async =>
-        Sqflite.firstIntValue(
+        _firstIntValue(
             await db.rawQuery('SELECT COUNT(*) FROM $table')) ??
         0;
     return {
@@ -721,7 +772,7 @@ class DatabaseHelper {
     }
 
     // Konsultasi hari ini (atau sesuai rentang tanggal)
-    final consultationsToday = Sqflite.firstIntValue(
+    final consultationsToday = _firstIntValue(
       await db.rawQuery(consultationQuery)
     ) ?? 0;
     // Jumlah Pasien (berdasarkan pet_id unik di konsultasi pada periode ini)
@@ -733,7 +784,7 @@ class DatabaseHelper {
     } else {
       petQuery += " WHERE date(created_at) = '$todayStr'";
     }
-    final totalPets = Sqflite.firstIntValue(
+    final totalPets = _firstIntValue(
       await db.rawQuery(petQuery)
     ) ?? 0;
 
@@ -746,7 +797,7 @@ class DatabaseHelper {
     } else {
       doctorQuery += " WHERE date(created_at) = '$todayStr'";
     }
-    final totalDoctors = Sqflite.firstIntValue(
+    final totalDoctors = _firstIntValue(
       await db.rawQuery(doctorQuery)
     ) ?? 0;
 
@@ -759,7 +810,7 @@ class DatabaseHelper {
     } else {
       unpaidQuery = "SELECT COUNT(*) FROM consultations WHERE (status = 'menunggu' OR status = 'waiting' OR status = 'scheduled') AND date(created_at) = '$todayStr'";
     }
-    final unpaidTransactions = Sqflite.firstIntValue(
+    final unpaidTransactions = _firstIntValue(
       await db.rawQuery(unpaidQuery)
     ) ?? 0;
 
@@ -830,11 +881,11 @@ class DatabaseHelper {
   Future<Map<String, dynamic>> getAdminReportStats() async {
     final db = await database;
     
-    final totalConsultations = Sqflite.firstIntValue(
+    final totalConsultations = _firstIntValue(
       await db.rawQuery("SELECT COUNT(*) FROM consultations")
     ) ?? 0;
     
-    final totalPets = Sqflite.firstIntValue(
+    final totalPets = _firstIntValue(
       await db.rawQuery("SELECT COUNT(*) FROM pets")
     ) ?? 0;
     
@@ -842,7 +893,7 @@ class DatabaseHelper {
     // For now we'll mock the revenue as totalConsultations * 150000 (assumed average price)
     final revenue = totalConsultations * 150000;
     
-    final totalTransactions = Sqflite.firstIntValue(
+    final totalTransactions = _firstIntValue(
       await db.rawQuery("SELECT COUNT(*) FROM consultations WHERE status = 'selesai' OR status = 'completed'")
     ) ?? 0;
     
