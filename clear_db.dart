@@ -36,9 +36,9 @@ void main() async {
 
   for (var table in tables) {
     try {
-      await conn.execute(Sql('DELETE FROM \$table'));
+      await conn.execute(Sql('DELETE FROM $table'));
     } catch (e) {
-      print('Could not delete from \$table: \$e');
+      print('Could not delete from $table: $e');
     }
   }
 

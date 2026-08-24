@@ -53,15 +53,17 @@ class DatabaseHelper {
           'services', 'medicines'
         ];
         for (var t in tables) {
-          try { await pgDb.execute('DROP TABLE IF EXISTS \$t CASCADE'); } catch(_) {}
+          try { await pgDb.execute('DROP TABLE IF EXISTS $t CASCADE'); } catch(_) {}
         }
       }
 
-      await _onCreate(pgDb, 1);
-      // Wait for table creation then try seeding
-      await _seed(pgDb);
+      try {
+        await _onCreate(pgDb, 1);
+        // Wait for table creation then try seeding
+        await _seed(pgDb);
+
     } catch (e) {
-      print('Database init error: \$e');
+      print('Database init error: $e');
     }
     
     return pgDb;
@@ -321,7 +323,7 @@ class DatabaseHelper {
     // Use raw queries with ON CONFLICT DO NOTHING to avoid crashing if partially seeded
     await db.execute('''
       INSERT INTO users (name, email, password_hash, phone, role, created_at) 
-      VALUES ('Adel Pemilik', 'owner@halopet.com', '\${hashPassword('123456')}', '081234567890', 'owner', '\$now')
+      VALUES ('Adel Pemilik', 'owner@halopet.com', '${hashPassword('123456')}', '081234567890', 'owner', '$now')
       ON CONFLICT (email) DO NOTHING
     ''');
     

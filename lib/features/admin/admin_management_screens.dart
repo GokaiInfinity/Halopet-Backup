@@ -609,6 +609,10 @@ class _AdminDoctorManagementScreenState extends State<AdminDoctorManagementScree
                 Text(doctor['specialist'] ?? 'Spesialis',
                     style: const TextStyle(
                         color: Color(0xFF7A93AA), fontSize: 12)),
+                const SizedBox(height: 4),
+                Text('Rp ${doctor['consultation_fee'] ?? 0}',
+                    style: const TextStyle(
+                        color: Color(0xFF0F2646), fontSize: 12, fontWeight: FontWeight.bold)),
               ],
             ),
           ),

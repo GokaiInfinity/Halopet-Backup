@@ -8,7 +8,7 @@ class OwnerPrescriptionListScreen extends StatefulWidget {
   const OwnerPrescriptionListScreen({super.key});
 
   @override
-  _OwnerPrescriptionListScreenState createState() =>
+  State<OwnerPrescriptionListScreen> createState() =>
       _OwnerPrescriptionListScreenState();
 }
 

@@ -34,7 +34,7 @@ class DoctorDetailScreen extends StatelessWidget {
                     color: AppColors.primary, fontWeight: FontWeight.w700))),
         const SizedBox(height: 22),
         Row(children: [
-          Expanded(child: _stat(Icons.star, '${doctor['rating']}', 'Rating')),
+          Expanded(child: _stat(Icons.star, '${(doctor['rating'] as num).toStringAsFixed(2).replaceAll(RegExp(r'0*$'), '').replaceAll(RegExp(r'\.$'), '')}', 'Rating')),
           const SizedBox(width: 12),
           Expanded(
               child: _stat(Icons.badge_outlined, '${doctor['experience']} th',

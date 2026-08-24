@@ -116,7 +116,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
                                         color: Color(0xFFFFC107), size: 16),
                                     const SizedBox(width: 4),
                                     Text(
-                                        '${doctor['rating']} (${doctor['experience']} thn)',
+                                        '${(doctor['rating'] as num).toStringAsFixed(2).replaceAll(RegExp(r'0*$'), '').replaceAll(RegExp(r'\.$'), '')} (${doctor['experience']} thn)',
                                         style: const TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold)),
