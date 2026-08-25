@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/routes.dart';
@@ -183,8 +185,24 @@ class AdminTransactionScreen extends StatelessWidget {
 }
 
 // ==== MOCKUP 18: LAPORAN & STATISTIK ====
-class AdminReportScreen extends StatelessWidget {
+class AdminReportScreen extends StatefulWidget {
   const AdminReportScreen({super.key});
+
+  @override
+  State<AdminReportScreen> createState() => _AdminReportScreenState();
+}
+
+class _AdminReportScreenState extends State<AdminReportScreen> {
+  DateTime? _startDate;
+  DateTime? _endDate;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _startDate = DateTime(now.year, now.month, 1);
+    _endDate = DateTime(now.year, now.month + 1, 0); // last day of month
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -197,26 +215,7 @@ class AdminReportScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // DATE PICKER
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('13 Mei 2025 - 19 Mei 2025',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F2646))),
-                    Icon(Icons.calendar_month, color: Color(0xFF0F2646)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 32),
+              // DATE PICKER REMOVED (Replaced by Calendar Icon below)
 
               // RINGKASAN
               const Text('Ringkasan',
@@ -226,7 +225,10 @@ class AdminReportScreen extends StatelessWidget {
                       color: Color(0xFF0F2646))),
               const SizedBox(height: 16),
               FutureBuilder<Map<String, dynamic>>(
-                future: DatabaseHelper.instance.getAdminReportStats(),
+                future: DatabaseHelper.instance.getAdminReportStats(
+                  startDate: _startDate,
+                  endDate: _endDate,
+                ),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
@@ -260,27 +262,7 @@ class AdminReportScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
 
-              // GRAFIK PENDAPATAN
-              const Text('Grafik Pendapatan',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                      color: Color(0xFF0F2646))),
-              const SizedBox(height: 16),
-              Container(
-                height: 200,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: const Center(
-                  // Placeholder for chart
-                  child: Icon(Icons.show_chart,
-                      size: 80, color: Color(0xFF2196F3)),
-                ),
-              ),
+_buildRevenueChartSection(),
               const SizedBox(height: 32),
 
               Center(
@@ -330,7 +312,242 @@ class AdminReportScreen extends StatelessWidget {
       ),
     );
   }
+
+Widget _buildRevenueChartSection() {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: DatabaseHelper.instance.getAdminChartData(
+        startDate: _startDate,
+        endDate: _endDate,
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 280,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final data = snapshot.data ?? [];
+        double maxRevenue = 1;
+        double totalRevenue = 0;
+
+        for (var row in data) {
+          final r = (row['total_revenue'] as num?)?.toDouble() ?? 0;
+          if (r > maxRevenue) maxRevenue = r;
+          totalRevenue += r;
+        }
+
+        final revenueBars = <BarChartGroupData>[];
+        for (int i = 0; i < data.length; i++) {
+          final revenue = (data[i]['total_revenue'] as num?)?.toDouble() ?? 0;
+          revenueBars.add(BarChartGroupData(
+            x: i,
+            showingTooltipIndicators: [0],
+            barRods: [
+              BarChartRodData(
+                toY: revenue == 0 ? (maxRevenue * 0.02) : revenue,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF4CAF50), Color(0xFF81C784)],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                ),
+                width: 14,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+              ),
+            ],
+          ));
+        }
+
+        Widget bottomLabel(double value, TitleMeta meta) {
+          final idx = value.toInt();
+          if (idx < 0 || idx >= data.length) return const SizedBox.shrink();
+          final parts = (data[idx]['date'] as String).split('-');
+          if (parts.length != 3) return const SizedBox.shrink();
+          if (data.length > 8 &&
+              idx != 0 &&
+              idx != data.length - 1 &&
+              idx % (data.length ~/ 4) != 0) {
+            return const SizedBox.shrink();
+          }
+          return SideTitleWidget(
+            axisSide: meta.axisSide,
+            space: 6,
+            child: Text('${parts[2]}/${parts[1]}',
+                style:
+                    const TextStyle(fontSize: 10, color: Color(0xFF7A93AA))),
+          );
+        }
+
+        Widget leftRevenueLabel(double value, TitleMeta meta) {
+          final label = value == 0 
+              ? '0'
+              : value >= 1000000
+              ? '${(value / 1000000).toStringAsFixed(1)}jt'
+              : '${(value / 1000).toStringAsFixed(0)}k';
+          return SideTitleWidget(
+            axisSide: meta.axisSide,
+            space: 4,
+            child: Text(label,
+                style:
+                    const TextStyle(fontSize: 9, color: Color(0xFF7A93AA))),
+          );
+        }
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _startDate != null && _endDate != null
+                        ? 'Grafik Pendapatan (${_startDate!.day}/${_startDate!.month} - ${_endDate!.day}/${_endDate!.month})'
+                        : 'Grafik Pendapatan',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F2646),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      if (totalRevenue > 0)
+                        Text(
+                          'Total: ${NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(totalRevenue)}',
+                          style: const TextStyle(
+                              fontSize: 12, color: Color(0xFF7A93AA)),
+                        ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: () async {
+                          final DateTime? pickedStart = await showDatePicker(
+                            context: context,
+                            initialDate: _startDate ?? DateTime.now(),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2030),
+                            helpText: 'Pilih Tanggal Mulai',
+                          );
+                          
+                          if (pickedStart != null) {
+                            final DateTime? pickedEnd = await showDatePicker(
+                              context: context,
+                              initialDate: _endDate != null && _endDate!.isAfter(pickedStart) ? _endDate! : pickedStart,
+                              firstDate: pickedStart,
+                              lastDate: DateTime(2030),
+                              helpText: 'Pilih Tanggal Akhir',
+                            );
+                            
+                            if (pickedEnd != null) {
+                              setState(() {
+                                _startDate = pickedStart;
+                                _endDate = pickedEnd;
+                              });
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.calendar_today, color: Colors.blue, size: 20),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 190,
+                child: data.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.show_chart,
+                                size: 48,
+                                color: Colors.grey.shade300),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Belum ada data pada periode ini',
+                              style: TextStyle(
+                                  color: Color(0xFF7A93AA), fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      )
+                    : BarChart(
+                        BarChartData(
+                          maxY: maxRevenue * 1.3,
+                          barTouchData: BarTouchData(
+                            enabled: false,
+                            touchTooltipData: BarTouchTooltipData(
+                              getTooltipColor: (_) => Colors.transparent,
+                              tooltipPadding: EdgeInsets.zero,
+                              tooltipMargin: 4,
+                              getTooltipItem: (group, gi, rod, ri) {
+                                final val = rod.toY < (maxRevenue * 0.05) ? 0 : rod.toY;
+                                final label = val >= 1000000 
+                                    ? '${(val / 1000000).toStringAsFixed(1)}jt'
+                                    : val >= 1000 
+                                        ? '${(val / 1000).toStringAsFixed(0)}k' 
+                                        : val.toInt().toString();
+                                return BarTooltipItem(
+                                  label,
+                                  const TextStyle(
+                                      color: Color(0xFF0F2646),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 10),
+                                );
+                              },
+                            ),
+                          ),
+                          gridData: FlGridData(
+                            show: true,
+                            drawVerticalLine: false,
+                            horizontalInterval: maxRevenue / 4,
+                            getDrawingHorizontalLine: (v) => FlLine(
+                              color: const Color(0xFFE5E9F0),
+                              strokeWidth: 1,
+                            ),
+                          ),
+                          borderData: FlBorderData(show: false),
+                          titlesData: FlTitlesData(
+                            rightTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false)),
+                            topTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false)),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 28,
+                                interval: 1,
+                                getTitlesWidget: bottomLabel,
+                              ),
+                            ),
+                            leftTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 44,
+                                interval: maxRevenue / 4,
+                                getTitlesWidget: leftRevenueLabel,
+                              ),
+                            ),
+                          ), // closes FlTitlesData
+                          barGroups: revenueBars,
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
+
 
 // ==== MOCKUP 19: PENGATURAN SISTEM ====
 class AdminSettingsScreen extends StatelessWidget {

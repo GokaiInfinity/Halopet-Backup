@@ -77,7 +77,7 @@ class _AdminTicketsScreenState extends State<AdminTicketsScreen> {
   Widget build(BuildContext context) {
     return AdminScaffold(
       title: 'Tiket Bantuan',
-      index: 7, // Adjust this index as needed for your bottom navigation
+      index: 4, // Adjust this index as needed for your bottom navigation
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _tickets.isEmpty

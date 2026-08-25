@@ -21,6 +21,15 @@ class DatabaseHelper {
     return null;
   }
 
+  double? _firstDoubleValue(List<Map<String, dynamic>> list) {
+    if (list.isNotEmpty && list.first.isNotEmpty) {
+      final value = list.first.values.first;
+      if (value is num) return value.toDouble();
+      if (value != null) return double.tryParse(value.toString());
+    }
+    return null;
+  }
+
     Future<PgDatabase> _init() async {
       final conn = await Connection.open(
       Endpoint(
@@ -470,6 +479,42 @@ class DatabaseHelper {
       'notes': 'Kondisi sehat. Jaga pola makan dan hidrasi.',
       'date': now
     });
+
+    // ── Seed dummy consultations (finished) for revenue chart ──────────────────
+    // Inserts 1–4 completed consultations per day for the past 7 days so the
+    // admin dashboard revenue chart shows meaningful data on first launch.
+    final seedCounts    = [2, 3, 1, 4, 2, 3, 2];   // per day, oldest → today
+    final seedDoctorIds = [doctorId, doctorId, doctorId, doctorId,
+                           doctorId, doctorId, doctorId];
+    for (int dayOffset = 6; dayOffset >= 0; dayOffset--) {
+      final day = DateTime.now().subtract(Duration(days: dayOffset));
+      final dayStr =
+          '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+      final int count = seedCounts[6 - dayOffset];
+      final int dId   = seedDoctorIds[6 - dayOffset];
+      for (int k = 0; k < count; k++) {
+        // Create a dummy schedule slot for this day
+        final schedId = await db.insert('schedules', {
+          'doctor_id': dId,
+          'date': dayStr,
+          'time': '${9 + k * 2}:00',
+          'status': 'booked',
+          'max_patients': 1,
+        });
+        // Create a finished consultation
+        await db.insert('consultations', {
+          'pet_id': petId,
+          'doctor_id': dId,
+          'schedule_id': schedId,
+          'complaint': 'Pemeriksaan rutin harian (seed)',
+          'method': 'Chat',
+          'status': 'finished',
+          'is_control': 0,
+          'parent_consultation_id': null,
+          'created_at': '${dayStr}T${(9 + k * 2).toString().padLeft(2, '0')}:00:00.000',
+        });
+      }
+    }
   }
 
   Future<Map<String, Object?>?> login(String email, String password) async {
@@ -880,23 +925,41 @@ class DatabaseHelper {
     };
   }
 
-  Future<Map<String, dynamic>> getAdminReportStats() async {
+  Future<Map<String, dynamic>> getAdminReportStats({DateTime? startDate, DateTime? endDate}) async {
     final db = await database;
     
+    String dateFilter = "";
+    if (startDate != null && endDate != null) {
+      final startStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+      final endStr = '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+      dateFilter = " WHERE date(created_at) >= '$startStr' AND date(created_at) <= '$endStr'";
+    }
+    
     final totalConsultations = _firstIntValue(
-      await db.rawQuery("SELECT COUNT(*) FROM consultations")
+      await db.rawQuery("SELECT COUNT(*) FROM consultations$dateFilter")
     ) ?? 0;
     
     final totalPets = _firstIntValue(
-      await db.rawQuery("SELECT COUNT(*) FROM pets")
+      await db.rawQuery("SELECT COUNT(*) FROM pets$dateFilter")
     ) ?? 0;
     
-    // In a real app we'd sum up actual transaction amounts from an invoices or payments table
-    // For now we'll mock the revenue as totalConsultations * 150000 (assumed average price)
-    final revenue = totalConsultations * 150000;
+    // Using actual sum instead of mock if consultation_fee exists
+    String revenueQuery = "SELECT SUM(d.consultation_fee) FROM consultations c JOIN doctors d ON c.doctor_id = d.id WHERE (c.status = 'completed' OR c.status = 'selesai' OR c.status = 'finished')";
+    if (startDate != null && endDate != null) {
+      final startStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+      final endStr = '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+      revenueQuery += " AND date(c.created_at) >= '$startStr' AND date(c.created_at) <= '$endStr'";
+    }
+    final revenue = (_firstDoubleValue(await db.rawQuery(revenueQuery)) ?? 0).toInt();
     
+    String transactionQuery = "SELECT COUNT(*) FROM consultations WHERE (status = 'selesai' OR status = 'completed')";
+    if (startDate != null && endDate != null) {
+      final startStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+      final endStr = '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+      transactionQuery += " AND date(created_at) >= '$startStr' AND date(created_at) <= '$endStr'";
+    }
     final totalTransactions = _firstIntValue(
-      await db.rawQuery("SELECT COUNT(*) FROM consultations WHERE status = 'selesai' OR status = 'completed'")
+      await db.rawQuery(transactionQuery)
     ) ?? 0;
     
     return {
@@ -934,7 +997,22 @@ class DatabaseHelper {
     // Fill in missing dates with zero values
     final Map<String, Map<String, dynamic>> dataMap = {};
     for (var row in result) {
-      dataMap[row['date'] as String] = row;
+      final dateVal = row['date'];
+      if (dateVal != null) {
+        String dateKey;
+        if (dateVal is DateTime) {
+          dateKey = '${dateVal.year}-${dateVal.month.toString().padLeft(2, '0')}-${dateVal.day.toString().padLeft(2, '0')}';
+        } else {
+          // It's already a String if it's from SQLite
+          // But PostgreSQL might return a DateTime depending on the driver
+          // Actually, wait, if dateVal is String but contains timestamp like "2026-08-01T00:00:00.000Z",
+          // splitting by 'T' and getting [0] is safer.
+          dateKey = dateVal.toString().split('T')[0].split(' ')[0];
+        }
+        final normalizedRow = Map<String, dynamic>.from(row);
+        normalizedRow['date'] = dateKey;
+        dataMap[dateKey] = normalizedRow;
+      }
     }
     
     final List<Map<String, dynamic>> finalData = [];

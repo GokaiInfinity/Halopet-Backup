@@ -19,7 +19,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
   String _selectedPeriod = 'Bulan Ini';
-  int _chartTabIndex = 0; // 0 for Konsultasi, 1 for Pendapatan
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -493,220 +492,206 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
-            height: 250,
+            height: 280,
             child: Center(child: CircularProgressIndicator()),
           );
         }
         
-        final data = snapshot.data ?? [];
-        if (data.isEmpty) {
-          return const SizedBox(
-            height: 250,
-            child: Center(child: Text('Tidak ada data pada periode ini')),
+        if (snapshot.hasError) {
+          return SizedBox(
+            height: 280,
+            child: Center(child: Text('Error: ${snapshot.error}')),
           );
         }
 
-        // Determine max values for scaling
+        final data = snapshot.data ?? [];
         double maxConsultations = 1;
-        double maxRevenue = 100000;
         
         for (var row in data) {
-          final consultations = (row['total_consultations'] as num?)?.toDouble() ?? 0;
-          final revenue = (row['total_revenue'] as num?)?.toDouble() ?? 0;
-          if (consultations > maxConsultations) maxConsultations = consultations;
-          if (revenue > maxRevenue) maxRevenue = revenue;
+          final c = (row['total_consultations'] as num?)?.toDouble() ?? 0;
+          if (c > maxConsultations) maxConsultations = c;
         }
 
-        List<BarChartGroupData> consultationBars = [];
-        List<BarChartGroupData> revenueBars = [];
-        
+        final consultationBars = <BarChartGroupData>[];
         for (int i = 0; i < data.length; i++) {
-          final row = data[i];
-          final consultations = (row['total_consultations'] as num?)?.toDouble() ?? 0;
-          final revenue = (row['total_revenue'] as num?)?.toDouble() ?? 0;
-          
-          consultationBars.add(
-            BarChartGroupData(
-              x: i,
-              barRods: [
-                BarChartRodData(
-                  toY: consultations,
-                  color: Colors.blue,
-                  width: 12,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+          final consultations =
+              (data[i]['total_consultations'] as num?)?.toDouble() ?? 0;
+          consultationBars.add(BarChartGroupData(
+            x: i,
+            showingTooltipIndicators: [0],
+            barRods: [
+              BarChartRodData(
+                toY: consultations == 0 ? 0.05 : consultations,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF2196F3), Color(0xFF64B5F6)],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
                 ),
-              ],
-            )
-          );
-          revenueBars.add(
-            BarChartGroupData(
-              x: i,
-              barRods: [
-                BarChartRodData(
-                  toY: revenue,
-                  color: Colors.green,
-                  width: 12,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                ),
-              ],
-            )
-          );
+                width: 14,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(6)),
+              ),
+            ],
+          ));
         }
 
-        // Prepare bottom titles
-        Widget bottomTitleWidgets(double value, TitleMeta meta) {
-          final int index = value.toInt();
-          if (index < 0 || index >= data.length) {
-            return const Text('');
+        Widget bottomLabel(double value, TitleMeta meta) {
+          final idx = value.toInt();
+          if (idx < 0 || idx >= data.length) return const SizedBox.shrink();
+          final parts = (data[idx]['date'] as String).split('-');
+          if (parts.length != 3) return const SizedBox.shrink();
+          if (data.length > 8 &&
+              idx != 0 &&
+              idx != data.length - 1 &&
+              idx % (data.length ~/ 4) != 0) {
+            return const SizedBox.shrink();
           }
-          final dateStr = data[index]['date'] as String;
-          // Format from 'YYYY-MM-DD' to 'DD/MM'
-          final parts = dateStr.split('-');
-          String label = '';
-          if (parts.length == 3) {
-            label = '${parts[2]}/${parts[1]}';
-          }
-          
-          // Show fewer labels if too many days
-          if (data.length > 10) {
-            if (index != 0 && index != data.length - 1) {
-              int step = data.length ~/ 5;
-              if (index % step != 0 || (data.length - 1 - index) < (step * 0.8).toInt().clamp(1, 100)) {
-                return const Text('');
-              }
-            }
-          }
-
           return SideTitleWidget(
             axisSide: meta.axisSide,
-            space: 8,
-            child: Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+            space: 6,
+            child: Text('${parts[2]}/${parts[1]}',
+                style:
+                    const TextStyle(fontSize: 10, color: Color(0xFF7A93AA))),
           );
         }
-
-        final bool isConsultation = _chartTabIndex == 0;
-        final maxY = isConsultation ? (maxConsultations * 1.2) : (maxRevenue * 1.2);
 
         return Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: const Color(0xFFE5E9F0)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 10,
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 14,
                 offset: const Offset(0, 4),
-              )
-            ]
+              ),
+            ],
           ),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Tabs
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _chartTabIndex = 0),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(
-                              color: isConsultation ? Colors.blue : Colors.transparent, 
-                              width: 2
-                            )
-                          ),
-                        ),
-                        child: Text(
-                          'Trend Konsultasi', 
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontWeight: isConsultation ? FontWeight.bold : FontWeight.normal,
-                            color: isConsultation ? Colors.blue : Colors.grey,
-                          )
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _chartTabIndex = 1),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(
-                              color: !isConsultation ? Colors.green : Colors.transparent, 
-                              width: 2
-                            )
-                          ),
-                        ),
-                        child: Text(
-                          'Trend Pendapatan', 
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontWeight: !isConsultation ? FontWeight.bold : FontWeight.normal,
-                            color: !isConsultation ? Colors.green : Colors.grey,
-                          )
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              const Text(
+                'Grafik Konsultasi',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F2646),
+                ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               SizedBox(
-                height: 200,
-                child: BarChart(
-                  BarChartData(
-                    barTouchData: BarTouchData(
-                      touchTooltipData: BarTouchTooltipData(
-                        getTooltipColor: (group) => const Color(0xFF0F2646),
-                        getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                          final textStyle = const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          );
-                          String valueStr;
-                          if (!isConsultation) {
-                            valueStr = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(rod.toY);
-                          } else {
-                            valueStr = rod.toY.toInt().toString();
-                          }
-                          final dateStr = data[group.x.toInt()]['date'] as String;
-                          return BarTooltipItem('$dateStr\n$valueStr', textStyle);
-                        },
-                      ),
-                    ),
-                    gridData: const FlGridData(show: false),
-                    titlesData: FlTitlesData(
-                      show: true,
-                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: 30,
-                          interval: 1,
-                          getTitlesWidget: bottomTitleWidgets,
+                height: 190,
+                child: data.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.bar_chart,
+                                size: 48,
+                                color: Colors.grey.shade300),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Belum ada data pada periode ini',
+                              style: TextStyle(
+                                  color: Color(0xFF7A93AA), fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      )
+                    : BarChart(
+                        BarChartData(
+                          maxY: maxConsultations * 1.3,
+                          barTouchData: BarTouchData(
+                            enabled: false,
+                            touchTooltipData: BarTouchTooltipData(
+                              getTooltipColor: (_) => Colors.transparent,
+                              tooltipPadding: EdgeInsets.zero,
+                              tooltipMargin: 4,
+                              getTooltipItem:
+                                  (group, gi, rod, ri) {
+                                final val = rod.toY < 0.1 ? 0 : rod.toY.toInt();
+                                return BarTooltipItem(
+                                '$val',
+                                const TextStyle(
+                                    color: Color(0xFF0F2646),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10),
+                              );
+                            },
+                            ),
+                          ),
+                          gridData: FlGridData(
+                            show: true,
+                            drawVerticalLine: false,
+                            horizontalInterval:
+                                (maxConsultations / 4).ceilToDouble(),
+                            getDrawingHorizontalLine: (v) => FlLine(
+                              color: const Color(0xFFE5E9F0),
+                              strokeWidth: 1,
+                            ),
+                          ),
+                          borderData: FlBorderData(show: false),
+                          titlesData: FlTitlesData(
+                            rightTitles: const AxisTitles(
+                                sideTitles:
+                                    SideTitles(showTitles: false)),
+                            topTitles: const AxisTitles(
+                                sideTitles:
+                                    SideTitles(showTitles: false)),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 28,
+                                interval: 1,
+                                getTitlesWidget: bottomLabel,
+                              ),
+                            ),
+                            leftTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 28,
+                                interval:
+                                    (maxConsultations / 4).ceilToDouble(),
+                                getTitlesWidget: (v, meta) {
+                                  // Show 0 label so baseline is clear
+                                  if (v % 1 != 0 && v != 0) return const SizedBox.shrink(); 
+                                  return SideTitleWidget(
+                                    axisSide: meta.axisSide,
+                                    space: 4,
+                                    child: Text('${v.toInt()}',
+                                        style: const TextStyle(
+                                            fontSize: 9,
+                                            color: Color(0xFF7A93AA))),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          barGroups: consultationBars,
                         ),
                       ),
-                      leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              ),
+              Align(
+                alignment: Alignment.center,
+                child: TextButton(
+                  onPressed: () =>
+                      Navigator.pushNamed(context, AppRoutes.adminReports),
+                  child: const Text(
+                    'Lihat Detail Laporan',
+                    style: TextStyle(
+                      color: Color(0xFF2196F3),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
                     ),
-                    borderData: FlBorderData(show: false),
-                    maxY: maxY,
-                    barGroups: isConsultation ? consultationBars : revenueBars,
                   ),
                 ),
               ),
             ],
           ),
         );
-      }
+      },
     );
   }
 }

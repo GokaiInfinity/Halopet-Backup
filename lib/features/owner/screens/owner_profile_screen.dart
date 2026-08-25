@@ -58,7 +58,8 @@ class OwnerProfileScreen extends StatelessWidget {
           const SizedBox(height: 8),
           _buildSettingsItemTextTrailing('Bahasa', 'Indonesia >'),
           const SizedBox(height: 16),
-          _buildSettingsItemOnlyText('Bantuan & Dukungan',
+          _buildSettingsItem(Icons.help_outline, 'Bantuan & Pengaduan',
+              'Buat tiket pengaduan atau hubungi kami',
               onTap: () =>
                   Navigator.pushNamed(context, AppRoutes.helpCenter)),
           const SizedBox(height: 16),
