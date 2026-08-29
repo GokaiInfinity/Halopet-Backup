@@ -46,16 +46,14 @@ class OwnerScaffold extends StatelessWidget {
                     'Beranda', AppRoutes.ownerHome),
                 _buildNavItem(context, 1, Icons.pets, Icons.pets_outlined,
                     'Hewan', AppRoutes.ownerPets),
-                _buildCenterNavItem(
-                    context, 2, 'Konsultasi', AppRoutes.ownerConsultations),
                 _buildNavItem(
                     context,
-                    3,
+                    2,
                     Icons.chat_bubble,
                     Icons.chat_bubble_outline,
                     'Pesan',
                     AppRoutes.ownerConsultations),
-                _buildNavItem(context, 4, Icons.person, Icons.person_outline,
+                _buildNavItem(context, 3, Icons.person, Icons.person_outline,
                     'Akun', AppRoutes.ownerProfile),
               ],
             ),

@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:halopet_mobile/database/database_helper.dart';
+import 'package:halopet_mobile/services/supabase_storage_service.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/pet_provider.dart';
@@ -189,6 +191,27 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
       // Save to database
       setState(() => saving = true);
       final ownerId = context.read<AuthProvider>().user!.id;
+
+      String finalPhoto = petPhoto;
+      if (finalPhoto.isNotEmpty && !finalPhoto.startsWith('http')) {
+        final uploaded = await SupabaseStorageService.uploadImage(File(finalPhoto));
+        if (uploaded != null) finalPhoto = uploaded;
+      }
+
+      List<String> finalAdditionalPhotos = [];
+      for (final path in additionalPhotos) {
+        if (path.isNotEmpty && !path.startsWith('http')) {
+          final uploaded = await SupabaseStorageService.uploadImage(File(path));
+          if (uploaded != null) {
+            finalAdditionalPhotos.add(uploaded);
+          } else {
+            finalAdditionalPhotos.add(path);
+          }
+        } else {
+          finalAdditionalPhotos.add(path);
+        }
+      }
+
       final savedId = await context.read<PetProvider>().save({
         'owner_id': ownerId,
         'name': name,
@@ -197,12 +220,12 @@ class _PetAddWizardScreenState extends State<PetAddWizardScreen> {
         'gender': gender,
         'age': int.tryParse(age) ?? 0,
         'weight': double.tryParse(weight) ?? 0,
-        'photo': petPhoto,
+        'photo': finalPhoto,
         'tanggal_lahir': birthDate,
         'warna_ciri': colorMarks,
         'status_steril': sterilized,
         'alergi': alergi.join(', '),
-        'additional_photos': json.encode(additionalPhotos),
+        'additional_photos': json.encode(finalAdditionalPhotos),
         'microchip_id': microchipId,
         'blood_type': bloodType,
       });

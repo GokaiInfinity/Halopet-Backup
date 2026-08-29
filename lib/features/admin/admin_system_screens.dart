@@ -6,7 +6,9 @@ import 'package:provider/provider.dart';
 import '../../app/routes.dart';
 import '../../core/widgets/role_scaffolds.dart';
 import '../../providers/auth_provider.dart';
-import '../../database/database_helper.dart';
+import 'package:halopet_mobile/features/admin/admin_inventory_screens.dart';
+import 'package:halopet_mobile/features/admin/admin_detailed_report_screen.dart';
+import 'package:halopet_mobile/database/database_helper.dart';
 
 // ==== MOCKUP 17: TRANSAKSI & PEMBAYARAN ====
 class AdminTransactionScreen extends StatelessWidget {
@@ -262,15 +264,22 @@ class _AdminReportScreenState extends State<AdminReportScreen> {
               ),
               const SizedBox(height: 32),
 
-_buildRevenueChartSection(),
+              _buildRevenueChartSection(),
               const SizedBox(height: 32),
 
               Center(
                 child: TextButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AdminDetailedReportScreen(),
+                      ),
+                    );
+                  },
                   child: const Text('Lihat Detail Laporan',
                       style: TextStyle(
-                          color: Color(0xFF2196F3),
+                          color: Color(0xFF2B8CB5),
                           fontWeight: FontWeight.bold)),
                 ),
               ),

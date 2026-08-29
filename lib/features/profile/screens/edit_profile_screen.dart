@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../core/widgets/common_widgets.dart';
+import '../../../services/supabase_storage_service.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -45,15 +46,59 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  void _showPhotoOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: Color(0xFF45A5C7)),
+              title: const Text('Pilih dari Galeri'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage();
+              },
+            ),
+            if (_photoPath.isNotEmpty)
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Hapus Foto', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _photoPath = '';
+                  });
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
     
     setState(() => _isLoading = true);
+    
+    String finalPhoto = _photoPath;
+    if (finalPhoto.isNotEmpty && !finalPhoto.startsWith('http')) {
+      final uploadedUrl = await SupabaseStorageService.uploadImage(File(finalPhoto));
+      if (uploadedUrl != null) {
+        finalPhoto = uploadedUrl;
+      }
+    }
+    
     final auth = context.read<AuthProvider>();
     final success = await auth.updateProfile(
       _nameController.text.trim(),
       _phoneController.text.trim(),
-      _photoPath,
+      finalPhoto,
     );
     
     setState(() => _isLoading = false);
@@ -87,16 +132,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               GestureDetector(
-                onTap: _pickImage,
+                onTap: _showPhotoOptions,
                 child: Stack(
                   children: [
                     CircleAvatar(
                       radius: 50,
                       backgroundColor: const Color(0xFFC0E0F6),
-                      backgroundImage: _photoPath.isNotEmpty
-                          ? FileImage(File(_photoPath))
+                      backgroundImage: _photoPath.isNotEmpty && (_photoPath.startsWith('http') || File(_photoPath).existsSync())
+                          ? (_photoPath.startsWith('http')
+                              ? NetworkImage(_photoPath) as ImageProvider
+                              : FileImage(File(_photoPath)))
                           : null,
-                      child: _photoPath.isEmpty
+                      child: _photoPath.isEmpty || (!_photoPath.startsWith('http') && !File(_photoPath).existsSync())
                           ? const Icon(Icons.person, size: 50, color: Colors.white)
                           : null,
                     ),

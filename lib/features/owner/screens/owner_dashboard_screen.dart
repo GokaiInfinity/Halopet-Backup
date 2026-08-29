@@ -53,10 +53,12 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               // HEADER
               Row(
                 children: [
-                  user.photo.isNotEmpty
+                  user.photo.isNotEmpty && (user.photo.startsWith('http') || File(user.photo).existsSync())
                       ? CircleAvatar(
                           radius: 24,
-                          backgroundImage: FileImage(File(user.photo)),
+                          backgroundImage: user.photo.startsWith('http')
+                              ? NetworkImage(user.photo) as ImageProvider
+                              : FileImage(File(user.photo)),
                         )
                       : CircleAvatar(
                           radius: 24,
@@ -248,10 +250,12 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
               child: Column(
                 children: [
-                  (pet['photo']?.toString() ?? '').isNotEmpty
+                  (pet['photo']?.toString() ?? '').isNotEmpty && ((pet['photo'].toString().startsWith('http')) || File(pet['photo'].toString()).existsSync())
                       ? CircleAvatar(
                           radius: 28,
-                          backgroundImage: FileImage(File(pet['photo'].toString())),
+                          backgroundImage: pet['photo'].toString().startsWith('http')
+                              ? NetworkImage(pet['photo'].toString()) as ImageProvider
+                              : FileImage(File(pet['photo'].toString())),
                         )
                       : CircleAvatar(
                           radius: 28,

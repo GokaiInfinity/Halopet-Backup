@@ -87,10 +87,12 @@ class _PetDetailTabsScreenState extends State<PetDetailTabsScreen> {
                       shape: BoxShape.circle,
                       border: Border.all(color: const Color(0xFFE6F4F8), width: 2),
                     ),
-                    child: petPhoto.isNotEmpty
+                    child: petPhoto.isNotEmpty && (petPhoto.startsWith('http') || File(petPhoto).existsSync())
                         ? CircleAvatar(
                             radius: 48,
-                            backgroundImage: FileImage(File(petPhoto)),
+                            backgroundImage: petPhoto.startsWith('http')
+                                ? NetworkImage(petPhoto) as ImageProvider
+                                : FileImage(File(petPhoto)),
                           )
                         : CircleAvatar(
                             radius: 48,
@@ -196,8 +198,11 @@ class _PetDetailTabsScreenState extends State<PetDetailTabsScreen> {
     List<String> additionalPhotos = [];
     if (pet['additional_photos'] != null && pet['additional_photos'].toString().isNotEmpty) {
       try {
-        List<dynamic> parsed = jsonDecode(pet['additional_photos'].toString());
-        additionalPhotos = parsed.map((e) => e.toString()).toList();
+        final photosRaw = jsonDecode(pet['additional_photos'].toString());
+        additionalPhotos = (photosRaw as List)
+            .map((e) => e.toString())
+            .where((path) => path.isNotEmpty && (path.startsWith('http') || File(path).existsSync()))
+            .toList();
       } catch (e) {
         // Ignore error
       }
@@ -206,15 +211,15 @@ class _PetDetailTabsScreenState extends State<PetDetailTabsScreen> {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        _buildSummaryRow('Tanggal Lahir', '${pet['tanggal_lahir'] ?? '-'}'),
+        _buildSummaryRow('Tanggal Lahir', pet['tanggal_lahir'] != null && pet['tanggal_lahir'].toString().isNotEmpty ? '${pet['tanggal_lahir']}' : '-'),
         const Divider(height: 32, color: Color(0xFFF2F4F7)),
-        _buildSummaryRow('Umur', '${pet['age']} Tahun'),
+        _buildSummaryRow('Umur', pet['age'] != null ? '${pet['age']} Tahun' : '-'),
         const Divider(height: 32, color: Color(0xFFF2F4F7)),
-        _buildSummaryRow('Berat Badan', '${pet['weight']} kg'),
+        _buildSummaryRow('Berat Badan', pet['weight'] != null ? '${pet['weight']} kg' : '-'),
         const Divider(height: 32, color: Color(0xFFF2F4F7)),
-        _buildSummaryRow('Warna / Ciri', '${pet['warna_ciri'] ?? '-'}'),
+        _buildSummaryRow('Warna / Ciri', pet['warna_ciri'] != null && pet['warna_ciri'].toString().isNotEmpty ? '${pet['warna_ciri']}' : '-'),
         const Divider(height: 32, color: Color(0xFFF2F4F7)),
-        _buildSummaryRow('Status Steril', '${pet['status_steril'] ?? '-'}'),
+        _buildSummaryRow('Status Steril', pet['status_steril'] != null && pet['status_steril'].toString().isNotEmpty ? '${pet['status_steril']}' : '-'),
         
         if (additionalPhotos.isNotEmpty) ...[
           const SizedBox(height: 32),
@@ -237,7 +242,9 @@ class _PetDetailTabsScreenState extends State<PetDetailTabsScreen> {
                           panEnabled: true,
                           minScale: 0.5,
                           maxScale: 4,
-                          child: Image.file(File(path), fit: BoxFit.contain),
+                          child: path.startsWith('http')
+                              ? Image.network(path, fit: BoxFit.contain)
+                              : Image.file(File(path), fit: BoxFit.contain),
                         ),
                         Positioned(
                           top: 0,
@@ -254,7 +261,9 @@ class _PetDetailTabsScreenState extends State<PetDetailTabsScreen> {
               },
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.file(File(path), width: 80, height: 80, fit: BoxFit.cover),
+                child: path.startsWith('http')
+                    ? Image.network(path, width: 80, height: 80, fit: BoxFit.cover)
+                    : Image.file(File(path), width: 80, height: 80, fit: BoxFit.cover),
               ),
             )).toList(),
           ),
@@ -275,12 +284,33 @@ class _PetDetailTabsScreenState extends State<PetDetailTabsScreen> {
         ? 'Tidak ada' 
         : penyakits.map((e) => '${e['name']} (${e['date']})').join('\n');
 
+    bool isAlergiEmpty = pet['alergi'] == null || pet['alergi'].toString().isEmpty;
+    bool isRiwayatEmpty = vaksins.isEmpty && penyakits.isEmpty && isAlergiEmpty;
+
+    if (petProvider.loadingDetails) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (isRiwayatEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.history, size: 64, color: Color(0xFFB0C4D9)),
+            const SizedBox(height: 16),
+            const Text('Data riwayat masih kosong', style: TextStyle(color: Color(0xFF7A93AA), fontSize: 16)),
+          ],
+        ),
+      );
+    }
+
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
         _buildSummaryRow('Riwayat Vaksinasi', vaksinStr),
         const Divider(height: 32, color: Color(0xFFF2F4F7)),
-        _buildSummaryRow('Alergi', pet['alergi'] != null && pet['alergi'].toString().isNotEmpty ? '${pet['alergi']}' : 'Tidak ada'),
+        _buildSummaryRow('Alergi', !isAlergiEmpty ? '${pet['alergi']}' : '-'),
         const Divider(height: 32, color: Color(0xFFF2F4F7)),
         _buildSummaryRow('Riwayat Penyakit', penyakitStr),
       ],

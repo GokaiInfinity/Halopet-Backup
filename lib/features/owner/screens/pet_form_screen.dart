@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:halopet_mobile/services/supabase_storage_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -88,6 +89,14 @@ class _PetFormScreenState extends State<PetFormScreen> {
     setState(() => isLoading = true);
     
     final ownerId = context.read<AuthProvider>().user!.id;
+    String finalPhoto = _photoPath;
+    if (finalPhoto.isNotEmpty && !finalPhoto.startsWith('http')) {
+      final uploadedUrl = await SupabaseStorageService.uploadImage(File(finalPhoto));
+      if (uploadedUrl != null) {
+        finalPhoto = uploadedUrl;
+      }
+    }
+
     final savedId = await context.read<PetProvider>().save({
       'owner_id': ownerId,
       'name': name.text,
@@ -102,7 +111,7 @@ class _PetFormScreenState extends State<PetFormScreen> {
       'alergi': alergi.join(', '),
       'microchip_id': microchipId.text,
       'blood_type': bloodType,
-      'photo': _photoPath
+      'photo': finalPhoto
     }, id: widget.pet?['id'] as int?);
 
     if (savedId != null) {
@@ -393,14 +402,21 @@ class _PetFormScreenState extends State<PetFormScreen> {
                       shape: BoxShape.circle,
                       border: Border.all(color: const Color(0xFFE6F4F8), width: 3),
                     ),
-                    child: _photoPath.isNotEmpty
+                    child: _photoPath.isNotEmpty && (_photoPath.startsWith('http') || File(_photoPath).existsSync())
                         ? ClipOval(
-                            child: Image.file(
-                              File(_photoPath),
-                              width: 92,
-                              height: 92,
-                              fit: BoxFit.cover,
-                            ),
+                            child: _photoPath.startsWith('http')
+                                ? Image.network(
+                                    _photoPath,
+                                    width: 92,
+                                    height: 92,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Image.file(
+                                    File(_photoPath),
+                                    width: 92,
+                                    height: 92,
+                                    fit: BoxFit.cover,
+                                  ),
                           )
                         : const CircleAvatar(
                             radius: 46,

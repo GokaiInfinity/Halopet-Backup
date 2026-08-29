@@ -57,7 +57,7 @@ class _OwnerConsultationsScreenState extends State<OwnerConsultationsScreen> {
     final p = context.watch<ConsultationProvider>();
     return OwnerScaffold(
         title: 'Konsultasi',
-        index: 3,
+        index: 2,
         body: p.loading
             ? const Center(child: CircularProgressIndicator())
             : p.items.isEmpty

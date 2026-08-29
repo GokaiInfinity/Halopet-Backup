@@ -142,15 +142,28 @@ class _PetDashboardScreenState extends State<PetDashboardScreen> {
                   icon: Icons.medical_services_outlined,
                   title: 'Riwayat Kesehatan',
                   subtitle: 'Vaksin, alergi, obat, penyakit',
-                  onTap: () {},
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Data Riwayat Kesehatan masih kosong.')),
+                    );
+                  },
                 ),
                 _buildMenuTile(
                   icon: Icons.shield_outlined,
                   title: 'Riwayat Vaksinasi',
                   subtitle: 'Jadwal dan status imunisasi',
-                  onTap: () {
-                    Navigator.pushNamed(context, AppRoutes.petVaccinations,
-                        arguments: selectedPet);
+                  onTap: () async {
+                    final p = context.read<PetProvider>();
+                    await p.loadDetails(selectedPetId);
+                    if (p.vaccinations.isEmpty && mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Data Riwayat Vaksinasi masih kosong.')),
+                      );
+                    }
+                    if (mounted) {
+                      Navigator.pushNamed(context, AppRoutes.petVaccinations,
+                          arguments: selectedPet);
+                    }
                   },
                 ),
                 _buildMenuTile(

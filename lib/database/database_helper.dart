@@ -10,7 +10,13 @@ class DatabaseHelper {
   static final instance = DatabaseHelper._();
   PgDatabase? _database;
 
-  Future<PgDatabase> get database async => _database ??= await _init();
+  Future<PgDatabase> get database async {
+    if (_database != null && _database!.conn.isOpen) {
+      return _database!;
+    }
+    _database = await _init();
+    return _database!;
+  }
 
   int? _firstIntValue(List<Map<String, dynamic>> list) {
     if (list.isNotEmpty && list.first.isNotEmpty) {
@@ -969,6 +975,39 @@ class DatabaseHelper {
       'transaksi': totalTransactions,
     };
   }
+
+  Future<List<Map<String, dynamic>>> getDetailedConsultationReport({DateTime? startDate, DateTime? endDate}) async {
+    final db = await database;
+    
+    String dateFilter = "";
+    if (startDate != null && endDate != null) {
+      final startStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+      final endStr = '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+      dateFilter = " WHERE date(c.created_at) >= '$startStr' AND date(c.created_at) <= '$endStr'";
+    }
+
+    final query = '''
+      SELECT 
+        c.created_at as date,
+        c.status,
+        c.method,
+        p.name as pet_name,
+        u_owner.name as owner_name,
+        d_user.name as doctor_name,
+        c.complaint as diagnosis, 
+        COALESCE(d.consultation_fee, 0) as fee
+      FROM consultations c
+      JOIN pets p ON c.pet_id = p.id
+      JOIN users u_owner ON p.owner_id = u_owner.id
+      JOIN doctors d ON c.doctor_id = d.id
+      JOIN users d_user ON d.user_id = d_user.id
+      $dateFilter
+      ORDER BY c.created_at DESC
+    ''';
+
+    return await db.rawQuery(query);
+  }
+
 
   Future<List<Map<String, dynamic>>> getAdminChartData({DateTime? startDate, DateTime? endDate}) async {
     final db = await database;

@@ -70,7 +70,7 @@ class _PetListScreenState extends State<PetListScreen> {
     final isMale = (pet['gender'] == 'Jantan');
     return GestureDetector(
       onTap: () =>
-          Navigator.pushNamed(context, AppRoutes.petDetail, arguments: pet),
+          Navigator.pushNamed(context, AppRoutes.petInfo, arguments: {'pet': pet, 'tabIndex': 0}),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
@@ -114,6 +114,10 @@ class _PetListScreenState extends State<PetListScreen> {
               isMale ? Icons.male : Icons.female,
               color: isMale ? const Color(0xFF45A5C7) : const Color(0xFFE57373),
               size: 24,
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              onPressed: () => _showDeleteDialog(context, pet),
             ),
           ],
         ),
@@ -207,6 +211,34 @@ class _PetListScreenState extends State<PetListScreen> {
                   color: Color(0xFF45A5C7),
                   fontSize: 10,
                   fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+  void _showDeleteDialog(BuildContext context, Map<String, dynamic> pet) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Hewan'),
+        content: Text('Apakah Anda yakin ingin menghapus ${pet['name']}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final ownerId = context.read<AuthProvider>().user!.id;
+              await context.read<PetProvider>().remove(pet['id'] as int, ownerId);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Hewan berhasil dihapus')),
+                );
+              }
+            },
+            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+          ),
         ],
       ),
     );

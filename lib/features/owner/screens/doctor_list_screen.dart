@@ -36,7 +36,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
     final p = context.watch<DoctorProvider>();
     return OwnerScaffold(
         title: 'Cari dokter',
-        index: 2,
+        index: -1,
         body: p.loading
             ? const Center(child: CircularProgressIndicator())
             : Column(

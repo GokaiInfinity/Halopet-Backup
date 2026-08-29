@@ -139,7 +139,16 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
                               width: double.infinity,
                               child: Builder(
                                 builder: (context) {
-                                  final canEnter = _canEnterConsultation(c);
+                                  final isFinished = status.toUpperCase() == 'FINISHED' || status.toUpperCase() == 'COMPLETED';
+                                  final canEnter = isFinished || _canEnterConsultation(c);
+                                  
+                                  String buttonText = 'Belum Waktunya';
+                                  if (isFinished) {
+                                    buttonText = 'Lihat Riwayat Konsultasi';
+                                  } else if (canEnter) {
+                                    buttonText = 'Masuk Ruang Konsultasi';
+                                  }
+
                                   return ElevatedButton(
                                     onPressed: canEnter
                                         ? () {
@@ -156,7 +165,7 @@ class _DoctorConsultationsScreenState extends State<DoctorConsultationsScreen> {
                                       backgroundColor: canEnter ? null : Colors.grey,
                                       disabledBackgroundColor: Colors.grey.shade300,
                                     ),
-                                    child: Text(canEnter ? 'Masuk Ruang Konsultasi' : 'Belum Waktunya'),
+                                    child: Text(buttonText),
                                   );
                                 }
                               ),
