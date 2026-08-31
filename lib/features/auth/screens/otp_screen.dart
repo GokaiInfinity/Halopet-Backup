@@ -8,9 +8,7 @@ import '../../../app/theme.dart';
 import '../../../core/widgets/common_widgets.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/whapi_service.dart';
-import '../../../app/theme.dart';
-import '../../../core/widgets/common_widgets.dart';
-import '../../../providers/auth_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class OtpScreen extends StatefulWidget {
   final String email;
@@ -33,8 +31,8 @@ class OtpScreen extends StatefulWidget {
 }
 
 class _OtpScreenState extends State<OtpScreen> {
-  final List<TextEditingController> _controllers = List.generate(6, (_) => TextEditingController());
-  final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
+  final List<TextEditingController> _controllers = List.generate(8, (_) => TextEditingController());
+  final List<FocusNode> _focusNodes = List.generate(8, (_) => FocusNode());
   Timer? _timer;
   int _secondsRemaining = 60;
 
@@ -43,7 +41,6 @@ class _OtpScreenState extends State<OtpScreen> {
   @override
   void initState() {
     super.initState();
-    _currentSentOtp = widget.sentOtp;
     _startTimer();
   }
 
@@ -73,7 +70,7 @@ class _OtpScreenState extends State<OtpScreen> {
 
   void _onChanged(String value, int index) {
     if (value.isNotEmpty) {
-      if (index < 5) {
+      if (index < 7) {
         _focusNodes[index + 1].requestFocus();
       } else {
         _focusNodes[index].unfocus();
@@ -130,7 +127,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     color: Color(0xFF0F2646))),
             const SizedBox(height: 8),
             Text(
-              'Kode 4 digit telah dikirim ke WhatsApp Anda:\n${widget.phone.isNotEmpty ? widget.phone : widget.email}',
+              'Kode 8 digit telah dikirim ke Email Anda:\n${widget.phone.isNotEmpty ? widget.phone : widget.email}',
               textAlign: TextAlign.center,
               style: const TextStyle(
                   color: Color(0xFF7A93AA), fontSize: 14, height: 1.5),
@@ -139,9 +136,9 @@ class _OtpScreenState extends State<OtpScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: List.generate(
-                4,
+                8,
                 (index) => Container(
-                  width: 50,
+                  width: 38,
                   height: 50,
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -164,7 +161,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     textAlign: TextAlign.center,
                     maxLength: 1,
                     style: const TextStyle(
-                        fontSize: 24,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF0F2646)),
                     decoration: const InputDecoration(
@@ -181,19 +178,24 @@ class _OtpScreenState extends State<OtpScreen> {
               onTap: () async {
                 if (_secondsRemaining > 0) return;
                 
-                // Resend Logic
-                String generatedOtp = (1000 + Random().nextInt(9000)).toString();
-                bool isSent = await WhapiService.sendOtpWhatsApp(widget.phone, generatedOtp);
-                if (isSent) {
-                  setState(() => _currentSentOtp = generatedOtp);
+                // Resend Logic via Supabase
+                try {
+                  await Supabase.instance.client.auth.resend(
+                    type: OtpType.signup,
+                    email: widget.email,
+                  );
                   _startTimer();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Kode OTP baru telah dikirim')),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Gagal mengirim ulang OTP')),
-                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Kode OTP baru telah dikirim ke Email Anda')),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Gagal mengirim ulang OTP: $e')),
+                    );
+                  }
                 }
               },
               child: Text(
@@ -209,30 +211,55 @@ class _OtpScreenState extends State<OtpScreen> {
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () async {
-                // Kumpulkan 4 digit input
-                String inputOtp = _controllers.take(4).map((c) => c.text).join();
+                // Kumpulkan 6 digit input
+                String inputOtp = _controllers.map((c) => c.text).join();
                 
-                if ((inputOtp.length == 4 && inputOtp == _currentSentOtp) || (_currentSentOtp.isEmpty && inputOtp == "1234")) {
-                  // Jika sukses verifikasi OTP, baru simpan ke DB
-                  final auth = context.read<AuthProvider>();
-                  final success = await auth.register(
-                    name: widget.name,
+                if (inputOtp.length < 8) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Harap masukkan 8 digit kode OTP!')),
+                  );
+                  return;
+                }
+
+                try {
+                  // Verifikasi OTP via Supabase
+                  final res = await Supabase.instance.client.auth.verifyOTP(
                     email: widget.email,
-                    password: widget.password,
-                    phone: widget.phone,
+                    token: inputOtp,
+                    type: OtpType.signup,
                   );
                   
-                  if (success && mounted) {
-                    Navigator.pushReplacementNamed(context, AppRoutes.authSuccess);
-                  } else if (mounted) {
+                  if (res.session != null) {
+                    // Jika sukses verifikasi, masukkan ke database lokal lalu muat profil
+                    final auth = context.read<AuthProvider>();
+                    await auth.insertUserAfterOTP(
+                      name: widget.name,
+                      email: widget.email,
+                      password: widget.password,
+                      phone: widget.phone,
+                    );
+                    final success = await auth.fetchProfileAfterOTP(widget.email);
+                    
+                    if (success && mounted) {
+                      Navigator.pushReplacementNamed(context, AppRoutes.authSuccess);
+                    } else if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Gagal memuat profil pengguna')),
+                      );
+                    }
+                  } else {
+                     if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Kode OTP tidak valid atau kedaluwarsa')),
+                      );
+                     }
+                  }
+                } catch (e) {
+                  if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Gagal membuat akun')),
+                      SnackBar(content: Text('Kode OTP salah atau error: $e')),
                     );
                   }
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Kode OTP salah!')),
-                  );
                 }
               },
               style: ElevatedButton.styleFrom(

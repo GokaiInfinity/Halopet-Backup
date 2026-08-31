@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../database/database_helper.dart';
 import '../models/models.dart';
 
@@ -42,20 +44,69 @@ class AuthProvider extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      final row = await DatabaseHelper.instance.login(email, password);
-      if (row == null) {
-        error = 'Email atau password tidak sesuai.';
+      final AuthResponse res = await Supabase.instance.client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      
+      if (res.user == null) {
+        error = 'Login Supabase gagal.';
         return false;
       }
-      user = AppUser.fromMap(row);
+
+      // Fetch user profile from public.users using email
+      final db = await DatabaseHelper.instance.database;
+      final rows = await db.query('users', where: 'LOWER(email) = ?', whereArgs: [email.toLowerCase().trim()]);
+      
+      if (rows.isEmpty) {
+        error = 'Profil pengguna tidak ditemukan di database.';
+        return false;
+      }
+      
+      user = AppUser.fromMap(rows.first);
       await _saveSession(user!);
       return true;
+    } on AuthException catch (e) {
+      error = e.message;
+      return false;
     } catch (e) {
       error = 'Login gagal: $e';
       return false;
     } finally {
       loading = false;
       notifyListeners();
+    }
+  }
+
+  Future<bool> fetchProfileAfterOTP(String email) async {
+    try {
+      final db = await DatabaseHelper.instance.database;
+      final rows = await db.query('users', where: 'LOWER(email) = ?', whereArgs: [email.toLowerCase().trim()]);
+      if (rows.isNotEmpty) {
+        user = AppUser.fromMap(rows.first);
+        await _saveSession(user!);
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      error = 'Gagal memuat profil: $e';
+      return false;
+    }
+  }
+
+  Future<bool> insertUserAfterOTP(
+      {required String name,
+      required String email,
+      required String password,
+      required String phone}) async {
+    try {
+      await DatabaseHelper.instance.registerOwner(
+          name: name, email: email, password: password, phone: phone);
+      return true;
+    } catch (e) {
+      error = 'Gagal menyimpan data pengguna: $e';
+      return false;
     }
   }
 
@@ -68,9 +119,16 @@ class AuthProvider extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      await DatabaseHelper.instance.registerOwner(
-          name: name, email: email, password: password, phone: phone);
-      return login(email, password);
+      // 1. Register to Supabase Auth
+      await Supabase.instance.client.auth.signUp(
+        email: email,
+        password: password,
+      );
+
+      return true;
+    } on AuthException catch (e) {
+      error = e.message;
+      return false;
     } catch (e) {
       String msg = e.toString();
       if (msg.contains('Exception: ')) {
@@ -89,6 +147,7 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     user = null;
+    await Supabase.instance.client.auth.signOut();
     await (await SharedPreferences.getInstance()).clear();
     notifyListeners();
   }

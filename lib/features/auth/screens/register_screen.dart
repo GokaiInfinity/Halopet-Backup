@@ -41,36 +41,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> submit() async {
     if (!form.currentState!.validate() || !agreeToTerms) return;
     
-    // Tampilkan loading dengan mengubah state (walau sementara hanya memblokir)
+    // Tampilkan loading
     final auth = context.read<AuthProvider>();
-    auth.setLoading(true);
     
-    // Generate OTP 4 digit
-    String generatedOtp = (1000 + Random().nextInt(9000)).toString();
+    bool success = await auth.register(
+      name: name.text,
+      email: email.text,
+      password: password.text,
+      phone: phone.text,
+    );
     
-    // Kirim OTP via WhatsApp (Whapi Cloud)
-    bool isSent = await WhapiService.sendOtpWhatsApp(phone.text, generatedOtp);
-    
-    auth.setLoading(false);
-    
-    if (isSent && mounted) {
+    if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kode OTP telah dikirim ke WhatsApp Anda.')),
+        const SnackBar(content: Text('Kode OTP (6 digit) telah dikirim ke Email Anda.')),
       );
       Navigator.pushNamed(
         context, 
         AppRoutes.otp, 
         arguments: {
-          'name': name.text,
           'email': email.text,
+          'name': name.text,
           'password': password.text,
           'phone': phone.text,
-          'sentOtp': generatedOtp
         }
       );
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal mengirim OTP WhatsApp. Periksa nomor Anda.')),
+        SnackBar(content: Text(auth.error ?? 'Gagal mendaftar.')),
       );
     }
   }
