@@ -1,46 +1,45 @@
 import 'dart:io';
-import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseStorageService {
   static Future<String?> uploadImage(File file, {String bucket = 'halopet-storage'}) async {
-    final supabaseUrl = dotenv.env['SUPABASE_URL'];
-    final supabaseKey = dotenv.env['SUPABASE_KEY'];
-
-    if (supabaseUrl == null || supabaseKey == null || supabaseUrl.isEmpty || supabaseKey.isEmpty) {
-      print('Error: SUPABASE_URL or SUPABASE_KEY not found in .env');
-      return null;
-    }
-
-    final ext = file.path.split('.').last.toLowerCase();
-    String contentType = 'image/jpeg';
-    if (ext == 'png') contentType = 'image/png';
-    if (ext == 'webp') contentType = 'image/webp';
-
-    final fileName = '${DateTime.now().millisecondsSinceEpoch}.$ext';
-    
-    // REST API Endpoint to upload file
-    final uri = Uri.parse('$supabaseUrl/storage/v1/object/$bucket/$fileName');
-
     try {
-      final request = http.Request('POST', uri)
-        ..headers['Authorization'] = 'Bearer $supabaseKey'
-        ..headers['Content-Type'] = contentType
-        ..bodyBytes = await file.readAsBytes();
+      final ext = file.path.split('.').last.toLowerCase();
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.$ext';
+      
+      final supabase = Supabase.instance.client;
+      
+      // Menggunakan SDK bawaan Supabase
+      // Ini akan secara otomatis mengirimkan Token Sesi pengguna yang sedang login
+      // Sehingga mematuhi Storage Policies (RLS) 'authenticated'
+      await supabase.storage.from(bucket).upload(
+        fileName, 
+        file,
+      );
 
-      final response = await http.Client().send(request);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        // Return public URL
-        return '$supabaseUrl/storage/v1/object/public/$bucket/$fileName';
-      } else {
-        final responseBody = await response.stream.bytesToString();
-        print('Upload failed: ${response.statusCode} $responseBody');
-        return null;
-      }
+      return supabase.storage.from(bucket).getPublicUrl(fileName);
     } catch (e) {
       print('Exception during upload: $e');
       return null;
+    }
+  }
+
+  static Future<bool> deleteImage(String url, {String bucket = 'halopet-storage'}) async {
+    try {
+      if (url.isEmpty || !url.contains(bucket)) return false;
+      
+      // Mengambil nama file dari URL
+      final uri = Uri.parse(url);
+      final pathSegments = uri.pathSegments;
+      final fileName = pathSegments.last;
+      
+      final supabase = Supabase.instance.client;
+      await supabase.storage.from(bucket).remove([fileName]);
+      
+      return true;
+    } catch (e) {
+      print('Exception during delete: $e');
+      return false;
     }
   }
 }

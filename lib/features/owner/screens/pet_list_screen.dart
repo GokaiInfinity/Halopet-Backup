@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -68,6 +69,7 @@ class _PetListScreenState extends State<PetListScreen> {
 
   Widget _buildPetCard(BuildContext context, Map<String, Object?> pet) {
     final isMale = (pet['gender'] == 'Jantan');
+    final petPhoto = pet['photo']?.toString() ?? '';
     return GestureDetector(
       onTap: () =>
           Navigator.pushNamed(context, AppRoutes.petInfo, arguments: {'pet': pet, 'tabIndex': 0}),
@@ -81,16 +83,24 @@ class _PetListScreenState extends State<PetListScreen> {
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: const Color(0xFFE8E2D6),
-              child: Icon(
-                  pet['species'] == 'Anjing'
-                      ? Icons.pets
-                      : Icons.catching_pokemon,
-                  color: Colors.white,
-                  size: 32),
-            ),
+            petPhoto.isNotEmpty && (petPhoto.startsWith('http') || File(petPhoto).existsSync())
+                ? CircleAvatar(
+                    radius: 28,
+                    backgroundImage: petPhoto.startsWith('http')
+                        ? NetworkImage(petPhoto) as ImageProvider
+                        : FileImage(File(petPhoto)),
+                    onBackgroundImageError: (e, s) {},
+                  )
+                : CircleAvatar(
+                    radius: 28,
+                    backgroundColor: const Color(0xFFE8E2D6),
+                    child: Icon(
+                        pet['species'] == 'Anjing'
+                            ? Icons.pets
+                            : Icons.catching_pokemon,
+                        color: Colors.white,
+                        size: 32),
+                  ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(

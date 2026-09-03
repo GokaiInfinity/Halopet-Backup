@@ -86,15 +86,25 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     
     setState(() => _isLoading = true);
     
+    final auth = context.read<AuthProvider>();
+    final oldPhoto = auth.user?.photo ?? '';
+    
     String finalPhoto = _photoPath;
     if (finalPhoto.isNotEmpty && !finalPhoto.startsWith('http')) {
       final uploadedUrl = await SupabaseStorageService.uploadImage(File(finalPhoto));
       if (uploadedUrl != null) {
         finalPhoto = uploadedUrl;
+        
+        // Jika berhasil upload foto baru, hapus foto lama dari bucket
+        if (oldPhoto.isNotEmpty && oldPhoto.startsWith('http')) {
+          await SupabaseStorageService.deleteImage(oldPhoto);
+        }
       }
+    } else if (finalPhoto.isEmpty && oldPhoto.isNotEmpty && oldPhoto.startsWith('http')) {
+      // Jika pengguna memilih hapus foto (kosong), hapus foto lama dari bucket
+      await SupabaseStorageService.deleteImage(oldPhoto);
     }
-    
-    final auth = context.read<AuthProvider>();
+
     final success = await auth.updateProfile(
       _nameController.text.trim(),
       _phoneController.text.trim(),
@@ -143,6 +153,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               ? NetworkImage(_photoPath) as ImageProvider
                               : FileImage(File(_photoPath)))
                           : null,
+                      onBackgroundImageError: _photoPath.isNotEmpty ? (e, s) {
+                        // Suppress error if image fails to load
+                      } : null,
                       child: _photoPath.isEmpty || (!_photoPath.startsWith('http') && !File(_photoPath).existsSync())
                           ? const Icon(Icons.person, size: 50, color: Colors.white)
                           : null,

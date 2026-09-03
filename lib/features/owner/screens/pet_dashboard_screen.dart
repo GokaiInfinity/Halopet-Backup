@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -63,6 +64,7 @@ class _PetDashboardScreenState extends State<PetDashboardScreen> {
               itemBuilder: (context, index) {
                 final pet = pets[index];
                 final isSelected = pet['id'] == selectedPetId;
+                final petPhoto = pet['photo']?.toString() ?? '';
                 return GestureDetector(
                   onTap: () {
                     setState(() => selectedPetId = pet['id'] as int);
@@ -80,16 +82,24 @@ class _PetDashboardScreenState extends State<PetDashboardScreen> {
                                     color: const Color(0xFF45A5C7), width: 2)
                                 : null,
                           ),
-                          child: CircleAvatar(
-                            radius: 32,
-                            backgroundColor: const Color(0xFFE8E2D6),
-                            child: Icon(
-                                pet['species'] == 'Anjing'
-                                    ? Icons.pets
-                                    : Icons.catching_pokemon,
-                                color: Colors.white,
-                                size: 36),
-                          ),
+                          child: petPhoto.isNotEmpty && (petPhoto.startsWith('http') || File(petPhoto).existsSync())
+                              ? CircleAvatar(
+                                  radius: 32,
+                                  backgroundImage: petPhoto.startsWith('http')
+                                      ? NetworkImage(petPhoto) as ImageProvider
+                                      : FileImage(File(petPhoto)),
+                                  onBackgroundImageError: (e, s) {},
+                                )
+                              : CircleAvatar(
+                                  radius: 32,
+                                  backgroundColor: const Color(0xFFE8E2D6),
+                                  child: Icon(
+                                      pet['species'] == 'Anjing'
+                                          ? Icons.pets
+                                          : Icons.catching_pokemon,
+                                      color: Colors.white,
+                                      size: 36),
+                                ),
                         ),
                         const SizedBox(height: 8),
                         Text(

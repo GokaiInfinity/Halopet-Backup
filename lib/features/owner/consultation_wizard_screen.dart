@@ -560,15 +560,23 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> wit
                   ),
                   child: ListTile(
                     contentPadding: const EdgeInsets.all(12),
-                    leading: CircleAvatar(
-                      radius: 30,
-                      backgroundColor: const Color(0xFFF0F4F8),
-                      child: Icon(
-                          pet['species'] == 'Anjing'
-                              ? Icons.pets
-                              : Icons.pets_outlined,
-                          color: const Color(0xFF45A5C7)),
-                    ),
+                    leading: (pet['photo']?.toString() ?? '').isNotEmpty && ((pet['photo'].toString().startsWith('http')) || File(pet['photo'].toString()).existsSync())
+                        ? CircleAvatar(
+                            radius: 30,
+                            backgroundImage: pet['photo'].toString().startsWith('http')
+                                ? NetworkImage(pet['photo'].toString()) as ImageProvider
+                                : FileImage(File(pet['photo'].toString())),
+                            onBackgroundImageError: (e, s) {},
+                          )
+                        : CircleAvatar(
+                            radius: 30,
+                            backgroundColor: const Color(0xFFF0F4F8),
+                            child: Icon(
+                                pet['species'] == 'Anjing'
+                                    ? Icons.pets
+                                    : Icons.pets_outlined,
+                                color: const Color(0xFF45A5C7)),
+                          ),
                     title: Text(pet['name'] as String,
                         style: const TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 16)),
@@ -1432,15 +1440,23 @@ class _ConsultationWizardScreenState extends State<ConsultationWizardScreen> wit
                 if (selectedPet != null) ...[
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundColor: const Color(0xFFF0F4F8),
-                        child: Icon(
-                            selectedPet!['species'] == 'Anjing'
-                                ? Icons.pets
-                                : Icons.pets_outlined,
-                            color: const Color(0xFF45A5C7)),
-                      ),
+                      (selectedPet!['photo']?.toString() ?? '').isNotEmpty && ((selectedPet!['photo'].toString().startsWith('http')) || File(selectedPet!['photo'].toString()).existsSync())
+                          ? CircleAvatar(
+                              radius: 30,
+                              backgroundImage: selectedPet!['photo'].toString().startsWith('http')
+                                  ? NetworkImage(selectedPet!['photo'].toString()) as ImageProvider
+                                  : FileImage(File(selectedPet!['photo'].toString())),
+                              onBackgroundImageError: (e, s) {},
+                            )
+                          : CircleAvatar(
+                              radius: 30,
+                              backgroundColor: const Color(0xFFF0F4F8),
+                              child: Icon(
+                                  selectedPet!['species'] == 'Anjing'
+                                      ? Icons.pets
+                                      : Icons.pets_outlined,
+                                  color: const Color(0xFF45A5C7)),
+                            ),
                       const SizedBox(width: 16),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

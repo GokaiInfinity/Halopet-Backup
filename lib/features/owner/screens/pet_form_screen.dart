@@ -89,12 +89,22 @@ class _PetFormScreenState extends State<PetFormScreen> {
     setState(() => isLoading = true);
     
     final ownerId = context.read<AuthProvider>().user!.id;
+    final oldPhoto = widget.pet?['photo'] as String? ?? '';
+    
     String finalPhoto = _photoPath;
     if (finalPhoto.isNotEmpty && !finalPhoto.startsWith('http')) {
       final uploadedUrl = await SupabaseStorageService.uploadImage(File(finalPhoto));
       if (uploadedUrl != null) {
         finalPhoto = uploadedUrl;
+        
+        // Jika berhasil upload foto baru, hapus foto lama dari bucket
+        if (oldPhoto.isNotEmpty && oldPhoto.startsWith('http')) {
+          await SupabaseStorageService.deleteImage(oldPhoto);
+        }
       }
+    } else if (finalPhoto.isEmpty && oldPhoto.isNotEmpty && oldPhoto.startsWith('http')) {
+      // Jika foto hewan dihapus, hapus foto lama dari bucket
+      await SupabaseStorageService.deleteImage(oldPhoto);
     }
 
     final savedId = await context.read<PetProvider>().save({

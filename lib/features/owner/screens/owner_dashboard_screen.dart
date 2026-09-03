@@ -59,6 +59,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                           backgroundImage: user.photo.startsWith('http')
                               ? NetworkImage(user.photo) as ImageProvider
                               : FileImage(File(user.photo)),
+                          onBackgroundImageError: (e, s) {},
                         )
                       : CircleAvatar(
                           radius: 24,
@@ -256,6 +257,7 @@ class _OwnerDashboardScreenState extends State<OwnerDashboardScreen> {
                           backgroundImage: pet['photo'].toString().startsWith('http')
                               ? NetworkImage(pet['photo'].toString()) as ImageProvider
                               : FileImage(File(pet['photo'].toString())),
+                          onBackgroundImageError: (e, s) {},
                         )
                       : CircleAvatar(
                           radius: 28,

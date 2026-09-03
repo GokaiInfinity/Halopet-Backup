@@ -93,6 +93,7 @@ class _PetDetailTabsScreenState extends State<PetDetailTabsScreen> {
                             backgroundImage: petPhoto.startsWith('http')
                                 ? NetworkImage(petPhoto) as ImageProvider
                                 : FileImage(File(petPhoto)),
+                            onBackgroundImageError: (e, s) {},
                           )
                         : CircleAvatar(
                             radius: 48,
