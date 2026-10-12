@@ -70,7 +70,12 @@ class AuthProvider extends ChangeNotifier {
       error = e.message;
       return false;
     } catch (e) {
-      error = 'Login gagal: $e';
+      String msg = e.toString();
+      if (msg.contains('SocketException') || msg.contains('timeout') || msg.contains('semaphore') || msg.contains('AuthRetryableFetchException')) {
+        error = 'Koneksi ke server terputus / timeout. Periksa koneksi internet Anda.';
+      } else {
+        error = 'Login gagal: $msg';
+      }
       return false;
     } finally {
       loading = false;
@@ -131,7 +136,9 @@ class AuthProvider extends ChangeNotifier {
       return false;
     } catch (e) {
       String msg = e.toString();
-      if (msg.contains('Exception: ')) {
+      if (msg.contains('SocketException') || msg.contains('timeout') || msg.contains('semaphore') || msg.contains('AuthRetryableFetchException')) {
+        error = 'Koneksi ke server terputus / timeout. Periksa koneksi internet Anda.';
+      } else if (msg.contains('Exception: ')) {
         error = msg.split('Exception: ').last;
       } else if (msg.contains('UNIQUE')) {
         error = 'Email sudah terdaftar.';
@@ -147,8 +154,15 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     user = null;
-    await Supabase.instance.client.auth.signOut();
-    await (await SharedPreferences.getInstance()).clear();
+    try {
+      await Supabase.instance.client.auth.signOut();
+    } catch (e) {
+      // Ignore network timeout or connection errors during signout
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+    } catch (_) {}
     notifyListeners();
   }
 
